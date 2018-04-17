@@ -1,4 +1,3 @@
-const fs = require('fs')
 const LibTokenizer = require('./Library')
 const TrackSyntax = require('./Track')
 const FSM = require('./Context')
@@ -8,9 +7,6 @@ const drumDict = require('../Config/Percussion.json')
 
 const instrList = Object.keys(instrDict)
 const drumList = Object.keys(drumDict)
-
-const packagePath = __dirname + '/../../package/'
-const packageInfo = require(packagePath + 'index.json')
 
 class Tokenizer {
   static startsTrue(src, ptr, match, blank = true) {
@@ -27,13 +23,12 @@ class Tokenizer {
     )
   }
 
-  constructor(input, {spec = 'String', buffer = true} = {}) {
+  constructor(input, {buffer = true, loader} = {}) {
     this.Comment = []
     this.Library = []
     this.Warnings = []
     this.Errors = []
     this.Settings = []
-
     this.Syntax = {
       Code: '',
       Dict: [], // Function Attributes
@@ -41,17 +36,12 @@ class Tokenizer {
       Chord: [] // Chord Operators
     }
 
+    this.$loader = loader
     this.$init = false
     this.$token = false
     this.$buffer = buffer
 
-    let source
-    if (spec === 'URL') {
-      source = fs.readFileSync(input, 'utf8')
-    } else {
-      source = input
-    }
-    this.Source = source.split(/\r?\n/g)
+    this.Source = input.split(/\r?\n/g) // Platform specific methods should be avoid in a generic tokenizer
   }
 
   initialize() {
@@ -75,7 +65,7 @@ class Tokenizer {
       switch (command[0].toLowerCase()) {
       case 'include':
         const name = origin.slice(command.index + command[0].length).trim()
-        if (packageInfo.Packages.includes(name)) {
+        if (this.$loader.packageInfo.Packages.includes(name)) {
           this.loadLibrary(name, origin)
         } else {
           // custom
@@ -119,7 +109,7 @@ class Tokenizer {
   tokenize() {
     if (this.$token) return
     this.initialize()
-    this.loadLibrary(packageInfo.AutoLoad)
+    this.loadLibrary(this.$loader.packageInfo.AutoLoad)
     this.Sections = []
 
     const src = this.Score
@@ -276,15 +266,8 @@ class Tokenizer {
   }
 
   loadLibrary(name, origin = '#AUTOLOAD') {
-    const path = packagePath + name
-    let packageData
-    if (this.$buffer && fs.existsSync(path + '/buffer.json')) {
-      packageData = require(path + '/buffer.json')
-    } else {
-      packageData = new Tokenizer(path + '/main.tml', {spec: 'URL'}).getLibrary()
-      // console.log(packageData);
-      fs.writeFileSync(path + '/buffer.json', JSON.stringify(packageData), 'utf8')
-    }
+    const path = this.$loader.packagePath + name
+    let packageData = this.$loader.load(path, Tokenizer)
     this.Syntax.Dict.push(...packageData.Dict)
     this.Syntax.Chord.push(...packageData.Chord)
     this.Syntax.Alias.push(...packageData.Alias)
