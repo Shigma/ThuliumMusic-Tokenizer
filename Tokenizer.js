@@ -267,7 +267,7 @@ class Tokenizer {
 
   loadLibrary(name, origin = '#AUTOLOAD') {
     const path = this.$loader.packagePath + name
-    let packageData = this.$loader.load(path, Tokenizer)
+    let packageData = this.$loader.load(path, this.$buffer, Tokenizer)
     this.Syntax.Dict.push(...packageData.Dict)
     this.Syntax.Chord.push(...packageData.Chord)
     this.Syntax.Alias.push(...packageData.Alias)

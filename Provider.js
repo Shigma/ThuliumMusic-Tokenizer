@@ -4,9 +4,9 @@ const packagePath = __dirname + '/../../package/'
 const packageInfo = require(packagePath + 'index.json')
 
 const loader = {
-  load (path, Tokenizer) {
+  load (path, buffer, Tokenizer) {
     let packageData
-    if (this.$buffer && fs.existsSync(path + '/buffer.json')) {
+    if (buffer && fs.existsSync(path + '/buffer.json')) {
       packageData = require(path + '/buffer.json')
     } else {
       packageData = new Tokenizer(fs.readFileSync(path + '/main.tml', 'utf8'), {
