@@ -25,7 +25,7 @@ const AliasContexts = {
         }
       }
     },
-    FSM.item('@lit', /^([^{}[\]"])/)
+    FSM.item('@lit', /^([^\{\}\[\]"])/)
   ],
   class: [
     FSM.item('sub', /^sub(?:track)?/),
@@ -37,7 +37,7 @@ const AliasContexts = {
     FSM.item('nam', /^name/),
     FSM.item('mac', /^macro/),
     FSM.item('str', /^str(?:ing)?/),
-    FSM.item('@und', /^[^}]/)
+    FSM.item('@und', /^[^\}]/)
   ]
 }
 

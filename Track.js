@@ -292,7 +292,7 @@ class TrackSyntax extends FSM {
           }
         },
         {
-          patt: /^"(([^{}()[]",]|\\.)*)"/,
+          patt: /^"(([^\{\}\(\)\[\]\"\,]|\\.)*)"/,
           token(match) {
             return {
               Type: 'String',
@@ -300,7 +300,7 @@ class TrackSyntax extends FSM {
             }
           }
         },
-        FSM.item('Expression', /^([+-]?\d+([./]\d+)?|Log2\(\d+\)([+-]\d+)?)/),
+        FSM.item('Expression', /^([+\-]?\d+([./]\d+)?|Log2\(\d+\)([+\-]\d+)?)/),
         FSM.include('prototype')
       ],
 
