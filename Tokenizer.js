@@ -23,25 +23,25 @@ class Tokenizer {
     )
   }
 
-  constructor(input, {buffer = true, loader} = {}) {
+  constructor(input, loader, library) {
     this.Comment = []
     this.Library = []
     this.Warnings = []
     this.Errors = []
     this.Settings = []
     this.Syntax = {
-      Code: '',
-      Dict: [], // Function Attributes
-      Alias: [], // Function Aliases
-      Chord: [] // Chord Operators
+      Code: '',   // Syntax Source Code
+      Dict: [],   // Function Attributes
+      Alias: [],  // Function Aliases
+      Chord: []   // Chord Operators
     }
 
-    this.$loader = loader
+    this.loadFile = loader
+    this.$library = library
     this.$init = false
     this.$token = false
-    this.$buffer = buffer
 
-    this.Source = input.split(/\r?\n/g) // Platform specific methods should be avoid in a generic tokenizer
+    this.Source = input.split(/\r?\n/g)
   }
 
   initialize() {
@@ -65,7 +65,7 @@ class Tokenizer {
       switch (command[0].toLowerCase()) {
       case 'include':
         const name = origin.slice(command.index + command[0].length).trim()
-        if (this.$loader.packageInfo.Packages.includes(name)) {
+        if (this.$library.Packages.includes(name)) {
           this.loadLibrary(name, origin)
         } else {
           // custom
@@ -109,7 +109,7 @@ class Tokenizer {
   tokenize() {
     if (this.$token) return
     this.initialize()
-    this.loadLibrary(this.$loader.packageInfo.AutoLoad)
+    this.loadLibrary(this.$library.AutoLoad)
     this.Sections = []
 
     const src = this.Score
@@ -248,14 +248,6 @@ class Tokenizer {
     return result
   }
 
-  toParser() {
-    return this.properties('Settings', 'Syntax', 'Sections')
-  }
-
-  fullForm() {
-    return this.properties('Comment', 'Library', 'Settings', 'Warnings', 'Errors', 'Syntax', 'Sections')
-  }
-
   getLibrary() {
     this.initialize()
     if (this.Errors.length > 0) {
@@ -266,8 +258,8 @@ class Tokenizer {
   }
 
   loadLibrary(name, origin = '#AUTOLOAD') {
-    const path = this.$loader.packagePath + name
-    let packageData = this.$loader.load(path, this.$buffer, Tokenizer)
+    const path = this.$library.Path + name
+    let packageData = this.loadFile(path)
     this.Syntax.Dict.push(...packageData.Dict)
     this.Syntax.Chord.push(...packageData.Chord)
     this.Syntax.Alias.push(...packageData.Alias)
