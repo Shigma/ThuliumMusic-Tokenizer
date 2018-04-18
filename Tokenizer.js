@@ -23,25 +23,25 @@ class Tokenizer {
     )
   }
 
-  constructor(input, {buffer = true, loader} = {}) {
+  constructor(input, loader, library) {
     this.Comment = []
     this.Library = []
     this.Warnings = []
     this.Errors = []
     this.Settings = []
     this.Syntax = {
-      Code: '',
-      Dict: [], // Function Attributes
-      Alias: [], // Function Aliases
-      Chord: [] // Chord Operators
+      Code: '',   // Syntax Source Code
+      Dict: [],   // Function Attributes
+      Alias: [],  // Function Aliases
+      Chord: []   // Chord Operators
     }
 
-    this.$loader = loader
+    this.loadFile = loader
+    this.$library = library
     this.$init = false
     this.$token = false
-    this.$buffer = buffer
 
-    this.Source = input.split(/\r?\n/g) // Platform specific methods should be avoid in a generic tokenizer
+    this.Source = input.split(/\r?\n/g)
   }
 
   async initialize() {
@@ -65,7 +65,7 @@ class Tokenizer {
       switch (command[0].toLowerCase()) {
       case 'include':
         const name = origin.slice(command.index + command[0].length).trim()
-        if (this.$loader.packageInfo.Packages.includes(name)) {
+        if (this.$library.Packages.includes(name)) {
           await this.loadLibrary(name, origin)
         } else {
           // custom
@@ -109,7 +109,7 @@ class Tokenizer {
   async tokenize() {
     if (this.$token) return
     await this.initialize()
-    await this.loadLibrary(this.$loader.packageInfo.AutoLoad)
+    await this.loadLibrary(this.$library.AutoLoad)
     this.Sections = []
 
     const src = this.Score
@@ -266,8 +266,8 @@ class Tokenizer {
   }
 
   async loadLibrary(name, origin = '#AUTOLOAD') {
-    const path = this.$loader.packagePath + name
-    let packageData = await this.$loader.load(path, Tokenizer)
+    const path = this.$library.Path + name
+    let packageData = await this.loadFile(path)
     this.Syntax.Dict.push(...packageData.Dict)
     this.Syntax.Chord.push(...packageData.Chord)
     this.Syntax.Alias.push(...packageData.Alias)
