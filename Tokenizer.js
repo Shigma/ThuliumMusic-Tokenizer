@@ -44,7 +44,7 @@ class Tokenizer {
     this.Source = input.split(/\r?\n/g) // Platform specific methods should be avoid in a generic tokenizer
   }
 
-  initialize() {
+  async initialize() {
     if (this.$init) return
 
     let ptr = 0
@@ -66,7 +66,7 @@ class Tokenizer {
       case 'include':
         const name = origin.slice(command.index + command[0].length).trim()
         if (this.$loader.packageInfo.Packages.includes(name)) {
-          this.loadLibrary(name, origin)
+          await this.loadLibrary(name, origin)
         } else {
           // custom
         }
@@ -106,10 +106,10 @@ class Tokenizer {
     this.$init = true
   }
 
-  tokenize() {
+  async tokenize() {
     if (this.$token) return
-    this.initialize()
-    this.loadLibrary(this.$loader.packageInfo.AutoLoad)
+    await this.initialize()
+    await this.loadLibrary(this.$loader.packageInfo.AutoLoad)
     this.Sections = []
 
     const src = this.Score
@@ -256,8 +256,8 @@ class Tokenizer {
     return this.properties('Comment', 'Library', 'Settings', 'Warnings', 'Errors', 'Syntax', 'Sections')
   }
 
-  getLibrary() {
-    this.initialize()
+  async getLibrary() {
+    await this.initialize()
     if (this.Errors.length > 0) {
       console.log(this.Errors)
       throw new Error()
@@ -265,9 +265,9 @@ class Tokenizer {
     return this.Syntax
   }
 
-  loadLibrary(name, origin = '#AUTOLOAD') {
+  async loadLibrary(name, origin = '#AUTOLOAD') {
     const path = this.$loader.packagePath + name
-    let packageData = this.$loader.load(path, Tokenizer)
+    let packageData = await this.$loader.load(path, Tokenizer)
     this.Syntax.Dict.push(...packageData.Dict)
     this.Syntax.Chord.push(...packageData.Chord)
     this.Syntax.Alias.push(...packageData.Alias)
