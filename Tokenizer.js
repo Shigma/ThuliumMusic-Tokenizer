@@ -30,10 +30,10 @@ class Tokenizer {
     this.Errors = []
     this.Settings = []
     this.Syntax = {
-      Code: '',   // Syntax Source Code
-      Dict: [],   // Function Attributes
-      Alias: [],  // Function Aliases
-      Chord: []   // Chord Operators
+      Code: '', // Syntax Source Code
+      Dict: [], // Function Attributes
+      Alias: [], // Function Aliases
+      Chord: [] // Chord Operators
     }
 
     this.loadFile = loader
