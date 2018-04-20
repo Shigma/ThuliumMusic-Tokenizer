@@ -46,7 +46,7 @@ class NoteSyntax {
     this.in = `(${pitOp})(${chord})(${volOp})`
     this.out = `(${durOp})(${epilog})`
     this.sqr = `\\[((?:${degree}${inner})+)\\]`
-    this.Patt = `((?:\\[(?:${degree}${inner})+\\]|${degree})${inner}${outer})`
+    this.Patt = `(?:(?:\\[(?:${degree}${inner})+\\]|${degree})${inner}${outer})`
   }
 
   static ArrayToRegex(array, multi = true) {
@@ -65,7 +65,7 @@ class TrackSyntax extends FSM {
     const note = new NoteSyntax(chords, degrees)
     const dict = Object.assign({
       not: {
-        patt: note.Patt,
+        patt: '(' + note.Patt + '+)',
         meta: 'Subtrack',
         epilog: arg => this.tokenize(arg, 'note').Content
       }
@@ -209,7 +209,7 @@ class TrackSyntax extends FSM {
         FSM.item('RepeatEnd', /^:\|\|/),
         FSM.item('LocalIndicator', /^!/),
         {
-          patt: /^\[(?=(\d+(~\d+)\. *)+\])/,
+          patt: /^\[(?=(\d+(~\d+)?\. *)+\])/,
           push: FSM.next('volta', /^\]/),
           token(match, content) {
             return {

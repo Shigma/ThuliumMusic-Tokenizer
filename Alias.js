@@ -137,11 +137,11 @@ class AliasSyntax extends FSM {
     }
 
     if (!this.Prec) {
-      if (this.LeftId && this.RightId) {
+      if (this.LeftId !== undefined && this.RightId !== undefined) {
         this.Prec = 400
-      } else if (this.RightId) {
-        this.Prec = 300
-      } else if (this.LeftId) {
+      } else if (this.RightId !== undefined) {
+        this.Prec = 301
+      } else if (this.LeftId !== undefined) {
         this.Prec = 200
       } else {
         this.Prec = 100
