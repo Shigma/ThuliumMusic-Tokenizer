@@ -1,9 +1,3 @@
-const SubtrackTypes = [
-  'Subtrack',
-  'Macrotrack',
-  'Note'
-]
-
 class FSM {
   constructor(source) {
     this.Contexts = source
@@ -128,9 +122,11 @@ class FSM {
   }
 
   static isSubtrack(token) {
-    if (SubtrackTypes.includes(token.Type)) {
+    if (token.Type === 'Note' || token.Type === 'Macrotrack') {
       return true
     } else if (token.Type === 'Function' && !token.VoidQ) {
+      return true
+    } else if (token.Type === 'Subtrack' && token.Content.some(FSM.isSubtrack)) {
       return true
     } else {
       return false
