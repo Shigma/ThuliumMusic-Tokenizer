@@ -183,8 +183,35 @@ class TrackSyntax extends FSM {
         }
       ],
 
+      // Section Notations
+      section: [
+        FSM.item('RepeatEndBegin', /^:\|\|:/),
+        FSM.item('RepeatBegin', /^\|\|:/),
+        FSM.item('RepeatEnd', /^:\|\|/),
+        FSM.item('LocalIndicator', /^!/),
+        {
+          patt: /^\[(?=(\d+(~\d+)?\. *)+\])/,
+          push: FSM.next('volta', /^\]/),
+          token(match, content) {
+            return {
+              Type: 'volta',
+              Order: [].concat(...content)
+            }
+          }
+        },
+        FSM.item('Coda', /^\+/),
+        FSM.item('Coda', /^Coda/),
+        FSM.item('Coda', /^ToCoda/),
+        FSM.item('Segno', /^s/),
+        FSM.item('Segno', /^Segno/),
+        FSM.item('DaCapo', /^DC/),
+        FSM.item('DaSegno', /^DS/),
+        FSM.item('Fine', /^Fine/)
+      ],
+
       // Track Contents
       default: [
+        FSM.include('section'),
         FSM.include('alias'),
         FSM.include('prototype'),
         FSM.include('note'),
@@ -201,20 +228,6 @@ class TrackSyntax extends FSM {
               Name: match[1],
               Alias: 0,
               Args: content
-            }
-          }
-        },
-        FSM.item('RepeatEndBegin', /^:\|\|:/),
-        FSM.item('RepeatBegin', /^\|\|:/),
-        FSM.item('RepeatEnd', /^:\|\|/),
-        FSM.item('LocalIndicator', /^!/),
-        {
-          patt: /^\[(?=(\d+(~\d+)?\. *)+\])/,
-          push: FSM.next('volta', /^\]/),
-          token(match, content) {
-            return {
-              Type: 'volta',
-              Order: [].concat(...content)
             }
           }
         },
@@ -261,14 +274,6 @@ class TrackSyntax extends FSM {
         FSM.item('PedalPress', /^&/),
         FSM.item('PedalRelease', /^\*/),
         FSM.item('Tie', /^\^/),
-        FSM.item('Coda', /^\+/),
-        FSM.item('Coda', /^Coda/),
-        FSM.item('Coda', /^ToCoda/),
-        FSM.item('Segno', /^s/),
-        FSM.item('Segno', /^Segno/),
-        FSM.item('DaCapo', /^DC/),
-        FSM.item('DaSegno', /^DS/),
-        FSM.item('Fine', /^Fine/),
         FSM.item('Space', /^(\s+)/)
       ],
 
