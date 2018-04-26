@@ -220,13 +220,3 @@ class LibTokenizer {
 }
 
 module.exports = LibTokenizer
-
-const ret = LibTokenizer.FunctionTokenize(`
-/**
- * @param {a} b
- * @alias 2; sub
- */ 
-function a (a, b) {}
-`)
-
-ret
