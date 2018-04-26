@@ -44,9 +44,14 @@ const AliasContexts = {
 class AliasSyntax extends FSM {
   constructor(declaration) {
     super(AliasContexts)
-    const match = declaration.match(AliasSyntax.Pattern)
-    this.Source = match[2].trim()
-    this.Prec = match[1]
+    if (typeof declaration === 'string') {
+      const match = declaration.match(AliasSyntax.Pattern)
+      this.Source = match[2].trim()
+      this.Prec = match[1]
+    } else {
+      this.Source = declaration.Source.trim()
+      this.Prec = declaration.Prec
+    }
   }
 
   analyze() {

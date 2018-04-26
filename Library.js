@@ -1,5 +1,6 @@
 const acorn = require('acorn')
-const {AliasSyntax} = require('./Alias')
+const { AliasSyntax } = require('./Alias')
+const docParse = require('./DocParser')
 
 const int = '([+\\-]?\\d+)'
 const item = `(\\[${int}?(:${int}?)?\\])?${int}?`
@@ -47,8 +48,8 @@ class LibTokenizer {
         throw new Error('With throw')
       case 'TryStatement':
         return walk(node.block) &&
-              (!node.handler || walk(node.handler.body)) &&
-              (!node.finalizer || walk(node.finalizer))
+          (!node.handler || walk(node.handler.body)) &&
+          (!node.finalizer || walk(node.finalizer))
       default:
         return true
       }
@@ -96,32 +97,92 @@ class LibTokenizer {
   }
 
   static FunctionTokenize(code) {
-    const aliases = [], errors = [], warnings = []
-    const dict = [], syntax = []
+    const aliases = [], errors = [], warnings = [], docs = []
+    const dict = [] // , syntax = []
     try {
       const result = acorn.parse(code, {
         ecmaVersion: 8,
         onComment(isBlock, text, start, end) {
-          const result = AliasSyntax.Pattern.exec(text)
-          if (!isBlock && result) {
+          if (isBlock) {
+            const result = docParse(text)
+            if (result !== null) {
+              docs.push({ start, end, result })
+            }
+          }/*  else if (AliasSyntax.Pattern.exec(text) !== null) {
             const alias = new AliasSyntax(text)
             if (alias.analyze()) {
               syntax.push({start, end, alias})
             } else {
               warnings.push(...alias.Warnings)
             }
-          }
+          } */
         }
       })
+
+      let pointer = 0, length = docs.length
       result.body.forEach((tok) => {
         if (tok.type === 'FunctionDeclaration') {
           const name = tok.id.name
           const voidQ = LibTokenizer.isVoid(tok)
-          dict.push({
+          const entry = {
             Name: name,
-            VoidQ: voidQ
-          })
-          let order = 0
+            VoidQ: voidQ,
+            Params: []
+          }
+          dict.push(entry)
+
+          let doc
+          while (pointer < length) {
+            if (docs[pointer].start < tok.start && (pointer + 1 >= length || docs[pointer + 1].start > tok.start)) {
+              doc = docs[pointer].result
+              pointer += 1
+              break
+            } else if (docs[pointer].start > tok.start) {
+              break
+            } else {
+              pointer += 1
+            }
+          }
+          if (doc !== undefined) {
+            let order = 0
+            for (const text of doc.aliases) {
+              const alias = new AliasSyntax(text)
+              if (alias.analyze()) {
+                aliases.push(Object.assign(alias, {
+                  Name: name,
+                  Order: order,
+                  VoidQ: voidQ
+                }))
+                order += 1
+              } else {
+                warnings.push(...alias.Warnings)
+              }
+            }
+            for (const param of tok.params) {
+              switch (param.type) {
+              case 'Identifier':
+                if (param.name in doc.params) {
+                  entry.Params.push(doc.params[param.name])
+                } else {
+                  entry.Params.push('any')
+                }
+                break
+              case 'AssignmentPattern':
+                if (param.left.type === 'Identifier' && param.left.name in doc.params) {
+                  entry.Params.push(doc.params[param.left.name])
+                } else {
+                  entry.Params.push('any')
+                }
+                break
+              default:
+                entry.Params.push('any')
+                break
+              }
+            }
+          } else {
+            entry.Params = new Array(tok.params.length).fill('any')
+          }
+          /* let order = 0
           for (let i = 0; i < syntax.length; i++) {
             if (tok.body.start < syntax[i].start && tok.body.end > syntax[i].end) {
               order += 1
@@ -131,7 +192,7 @@ class LibTokenizer {
                 VoidQ: voidQ
               }))
             }
-          }
+          } */
         } else {
           errors.push({
             Err: 'NotFuncDecl',
@@ -159,3 +220,13 @@ class LibTokenizer {
 }
 
 module.exports = LibTokenizer
+
+const ret = LibTokenizer.FunctionTokenize(`
+/**
+ * @param {a} b
+ * @alias 2; sub
+ */ 
+function a (a, b) {}
+`)
+
+ret
