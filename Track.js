@@ -227,7 +227,8 @@ class TrackSyntax extends FSM {
               Type: 'Function',
               Name: match[1],
               Alias: 0,
-              Args: content
+              Args: content,
+              VoidQ: functions.find(func => func.Name === match[1]).VoidQ
             }
           }
         },
