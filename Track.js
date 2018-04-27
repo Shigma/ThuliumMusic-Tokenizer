@@ -46,7 +46,7 @@ class NoteSyntax {
     this.in = `(${pitOp})(${chord})(${volOp})`
     this.out = `(${durOp})(${epilog})`
     this.sqr = `\\[((?:${degree}${inner})+)\\]`
-    this.Patt = `((?:\\[(?:${degree}${inner})+\\]|${degree})${inner}${outer})`
+    this.Patt = `(?:(?:\\[(?:${degree}${inner})+\\]|${degree})${inner}${outer})`
   }
 
   static ArrayToRegex(array, multi = true) {
@@ -65,7 +65,7 @@ class TrackSyntax extends FSM {
     const note = new NoteSyntax(chords, degrees)
     const dict = Object.assign({
       not: {
-        patt: note.Patt,
+        patt: '(' + note.Patt + '+)',
         meta: 'Subtrack',
         epilog: arg => this.tokenize(arg, 'note').Content
       }
@@ -183,8 +183,35 @@ class TrackSyntax extends FSM {
         }
       ],
 
+      // Section Notations
+      section: [
+        FSM.item('RepeatEndBegin', /^:\|\|:/),
+        FSM.item('RepeatBegin', /^\|\|:/),
+        FSM.item('RepeatEnd', /^:\|\|/),
+        FSM.item('LocalIndicator', /^!/),
+        {
+          patt: /^\[(?=(\d+(~\d+)?\. *)+\])/,
+          push: FSM.next('volta', /^\]/),
+          token(match, content) {
+            return {
+              Type: 'volta',
+              Order: [].concat(...content)
+            }
+          }
+        },
+        FSM.item('Coda', /^\+/),
+        FSM.item('Coda', /^Coda/),
+        FSM.item('Coda', /^ToCoda/),
+        FSM.item('Segno', /^s/),
+        FSM.item('Segno', /^Segno/),
+        FSM.item('DaCapo', /^DC/),
+        FSM.item('DaSegno', /^DS/),
+        FSM.item('Fine', /^Fine/)
+      ],
+
       // Track Contents
       default: [
+        FSM.include('section'),
         FSM.include('alias'),
         FSM.include('prototype'),
         FSM.include('note'),
@@ -200,21 +227,8 @@ class TrackSyntax extends FSM {
               Type: 'Function',
               Name: match[1],
               Alias: 0,
-              Args: content
-            }
-          }
-        },
-        FSM.item('RepeatEndBegin', /^:\|\|:/),
-        FSM.item('RepeatBegin', /^\|\|:/),
-        FSM.item('RepeatEnd', /^:\|\|/),
-        FSM.item('LocalIndicator', /^!/),
-        {
-          patt: /^\[(?=(\d+(~\d+)\. *)+\])/,
-          push: FSM.next('volta', /^\]/),
-          token(match, content) {
-            return {
-              Type: 'volta',
-              Order: [].concat(...content)
+              Args: content,
+              VoidQ: functions.find(func => func.Name === match[1]).VoidQ
             }
           }
         },
@@ -261,14 +275,6 @@ class TrackSyntax extends FSM {
         FSM.item('PedalPress', /^&/),
         FSM.item('PedalRelease', /^\*/),
         FSM.item('Tie', /^\^/),
-        FSM.item('Coda', /^\+/),
-        FSM.item('Coda', /^Coda/),
-        FSM.item('Coda', /^ToCoda/),
-        FSM.item('Segno', /^s/),
-        FSM.item('Segno', /^Segno/),
-        FSM.item('DaCapo', /^DC/),
-        FSM.item('DaSegno', /^DS/),
-        FSM.item('Fine', /^Fine/),
         FSM.item('Space', /^(\s+)/)
       ],
 

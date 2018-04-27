@@ -1,9 +1,3 @@
-const SubtrackTypes = [
-  'Subtrack',
-  'Macrotrack',
-  'Note'
-]
-
 class FSM {
   constructor(source) {
     this.Contexts = source
@@ -128,9 +122,11 @@ class FSM {
   }
 
   static isSubtrack(token) {
-    if (SubtrackTypes.includes(token.Type)) {
+    if (token.Type === 'Note' || token.Type === 'Macrotrack') {
       return true
     } else if (token.Type === 'Function' && !token.VoidQ) {
+      return true
+    } else if (token.Type === 'Subtrack' && token.Content.some(FSM.isSubtrack)) {
       return true
     } else {
       return false
@@ -139,7 +135,7 @@ class FSM {
 
   static arrange(content) {
     let prior = FSM.findPrior(content)
-    while (prior.Prec < FSM.MaxPrec) {
+    while (prior) {
       let left = prior.Id, right = prior.Id
       if (prior.LID !== undefined) {
         left = prior.Id - 1
@@ -183,14 +179,32 @@ class FSM {
   }
 
   static findPrior(content) {
-    let prior = { Prec: FSM.MaxPrec }
-    content.forEach((tok, index) => {
-      if (tok.Type === '@alias' && tok.Prec < prior.Prec) {
-        prior = Object.assign(tok, {Id: index})
-      }
-    })
-    return prior
+    let index
+    const priorPrec = content
+      .filter(tok => tok.Type === '@alias')
+      .reduce((prec, tok) => Math.min(prec, tok.Prec), FSM.MaxPrec)
+    if (priorPrec === FSM.MaxPrec) {
+      return false
+    } else if (priorPrec % 2 === 0) {
+      // Left Associative
+      index = content.findIndex(tok => tok.Prec === priorPrec)
+    } else {
+      // Right Associative
+      index = findLastIndex(content, tok => tok.Prec === priorPrec)
+    }
+    return Object.assign(content[index], { Id: index })
   }
+}
+
+function findLastIndex(array, callback, thisArg) {
+  let index = array.length
+  while (index > 0) {
+    index -= 1
+    if (callback.call(thisArg, array[index], index, array)) {
+      return index
+    }
+  }
+  return -1
 }
 
 FSM.MaxPrec = 10000
