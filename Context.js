@@ -185,7 +185,7 @@ class FSM {
       .reduce((prec, tok) => Math.min(prec, tok.Prec), FSM.MaxPrec)
     if (priorPrec === FSM.MaxPrec) {
       return false
-    } else if (priorPrec % 2 == 0) {
+    } else if (priorPrec % 2 === 0) {
       // Left Associative
       index = content.findIndex(tok => tok.Prec === priorPrec)
     } else {
