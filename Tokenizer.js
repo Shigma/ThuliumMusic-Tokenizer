@@ -8,6 +8,34 @@ const drumDict = require('../Config/Percussion.json')
 const instrList = Object.keys(instrDict)
 const drumList = Object.keys(drumDict)
 
+class TmSyntax {
+  constructor() {
+    this.Code = '' // Syntax Source Code
+    this.Dict = [] // Function Attributes
+    this.Alias = [] // Function Aliases
+    this.Chord = [] // Chord Operators
+    this.Context = [] // Notation Contexts
+    this.Namespace = [] // Namespace Data
+  }
+
+  loadSyntax(data) {
+    if (data.Chord) this.Chord.push(...data.Chord)
+    if (data.Dict) this.Dict.push(...data.Dict)
+    if (data.Alias) this.Alias.push(...data.Alias)
+    if (data.Namespace) this.Namespace.push(...data.Namespace)
+    if (data.Code) this.Code += data.Code
+    if (data.Context) {
+      for (const context in data.Context) {
+        if (context in this.Context) {
+          this.Context[context].push(...data.Context[context])
+        } else {
+          this.Context[context] = data.Context[context]
+        }
+      }
+    }
+  }
+}
+
 class Tokenizer {
   static startsTrue(src, ptr, match, blank = true) {
     return ptr < src.length && (
@@ -29,12 +57,7 @@ class Tokenizer {
     this.Warnings = []
     this.Errors = []
     this.Settings = []
-    this.Syntax = {
-      Code: '', // Syntax Source Code
-      Dict: [], // Function Attributes
-      Alias: [], // Function Aliases
-      Chord: [] // Chord Operators
-    }
+    this.Syntax = new TmSyntax()
 
     this.loadFile = loader
     this.$library = library
@@ -62,9 +85,10 @@ class Tokenizer {
       const command = origin.match(/[a-zA-Z]+/)
       ptr += 1
       if (!command) continue
-      switch (command[0].toLowerCase()) {
+      const keyword = command[0].toLowerCase()
+      switch (keyword) {
       case 'include':
-        const name = origin.slice(command.index + command[0].length).trim()
+        const name = origin.slice(command.index + keyword.length).trim()
         if (this.$library.Packages.includes(name)) {
           this.loadLibrary(name, origin)
         } else {
@@ -73,21 +97,14 @@ class Tokenizer {
         break
 
       case 'chord':
+      case 'function':
+      case 'notation':
         const lines = []
         while (Tokenizer.startsFalse(src, ptr, '#')) {
           lines.push(src[ptr])
           ptr += 1
         }
-        this.mergeLibrary(origin, lines, 'Chord')
-        break
-
-      case 'function':
-        let code = ''
-        while (Tokenizer.startsFalse(src, ptr, '#')) {
-          code += src[ptr] + '\n'
-          ptr += 1
-        }
-        this.mergeLibrary(origin, code, 'Function')
+        this.mergeLibrary(origin, lines, keyword)
         break
 
       case 'end':
@@ -239,15 +256,6 @@ class Tokenizer {
     }
   }
 
-  properties(...properties) {
-    this.tokenize()
-    const result = {}
-    properties.forEach(attr => {
-      result[attr] = this[attr]
-    })
-    return result
-  }
-
   getLibrary() {
     this.initialize()
     if (this.Errors.length > 0) {
@@ -260,10 +268,7 @@ class Tokenizer {
   loadLibrary(name, origin = '#AUTOLOAD') {
     const path = this.$library.Path + name
     let packageData = this.loadFile(path)
-    this.Syntax.Dict.push(...packageData.Dict)
-    this.Syntax.Chord.push(...packageData.Chord)
-    this.Syntax.Alias.push(...packageData.Alias)
-    this.Syntax.Code += packageData.Code
+    this.Syntax.loadSyntax(packageData)
     this.Library.push({
       Type: 'Package',
       Path: name,
@@ -273,10 +278,7 @@ class Tokenizer {
 
   mergeLibrary(head, source, type) {
     const data = LibTokenizer[type + 'Tokenize'](source)
-    if (data.Chord) this.Syntax.Chord.push(...data.Chord)
-    if (data.Dict) this.Syntax.Dict.push(...data.Dict)
-    if (data.Alias) this.Syntax.Alias.push(...data.Alias)
-    if (data.Code) this.Syntax.Code += data.Code
+    this.Syntax.loadSyntax(data)
     this.Errors.push(...data.Errors)
     this.Warnings.push(...data.Warnings)
     this.Library.push({
