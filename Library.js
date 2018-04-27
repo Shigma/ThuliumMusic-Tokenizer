@@ -56,7 +56,7 @@ class LibTokenizer {
     return walk(funcAST.body)
   }
 
-  static ChordTokenize(lines) {
+  static chordTokenize(lines) {
     const data = [], warnings = []
     lines.forEach(line => {
       const match = line.match(ChordPatt)
@@ -95,7 +95,8 @@ class LibTokenizer {
     }
   }
 
-  static FunctionTokenize(code) {
+  static functionTokenize(lines) {
+    const code = lines.join('\n')
     const aliases = [], errors = [], warnings = []
     const dict = [], syntax = []
     try {
@@ -113,7 +114,7 @@ class LibTokenizer {
           }
         }
       })
-      result.body.forEach((tok) => {
+      result.body.forEach(tok => {
         if (tok.type === 'FunctionDeclaration') {
           const name = tok.id.name
           const voidQ = LibTokenizer.isVoid(tok)
@@ -156,6 +157,52 @@ class LibTokenizer {
       Warnings: warnings
     }
   }
+
+  static notationTokenize(lines) {
+    const code = lines.join('\n')
+    const namespace = [], errors = [], warnings = [], syntax = {};
+    try {
+      const result = acorn.parse(code, {ecmaVersion: 8})
+      result.body.forEach(tok => {
+        if (tok.type === 'ClassDeclaration') {
+          const declaration = code.slice(tok.start, tok.end)
+          const data = eval(`new (${declaration})()`)
+          namespace.push({
+            Name: tok.id.name,
+            Code: declaration,
+            Include: data.Include
+          })
+          for (const context in data.Syntax) {
+            if (context in syntax) {
+              syntax[context].push(...data.Syntax[context])
+            } else {
+              syntax[context] = data.Syntax[context]
+            }
+          }
+        } else {
+          errors.push({
+            Err: 'NotClassDecl',
+            Type: tok.type,
+            Start: tok.start,
+            End: tok.end
+          })
+        }
+      })
+    } catch (err) {
+      errors.push({
+        Err: 'SyntaxError',
+        Info: err
+      })
+    }
+
+    return {
+      NameSpace: namespace,
+      Syntax: syntax,
+      Errors: errors,
+      Warnings: warnings
+    }
+  }
 }
 
 module.exports = LibTokenizer
+
