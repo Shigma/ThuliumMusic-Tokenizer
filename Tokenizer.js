@@ -68,7 +68,7 @@ class Tokenizer {
     this.$token = false
   }
 
-  initialize(forced = false) {
+  async initialize(forced = false) {
     if (this.$init && !forced) return this.Syntax
 
     let ptr = 0
@@ -91,9 +91,9 @@ class Tokenizer {
       case 'include':
         const name = origin.slice(command.index + keyword.length).trim()
         if (name.includes('/')) {
-          this.loadLibrary(this.$directory + '/' + name, origin)
+          await this.loadLibrary(this.$directory + '/' + name, origin)
         } else {
-          this.loadLibrary(this.$library.Path + '/' + name, origin)
+          await this.loadLibrary(this.$library.Path + '/' + name, origin)
         }
         break
 
@@ -125,10 +125,10 @@ class Tokenizer {
     return this.Syntax
   }
 
-  tokenize(forced = false) {
+  async tokenize(forced = false) {
     if (this.$token && !forced) return this.Sections
-    this.initialize()
-    this.loadLibrary(this.$library.Path + '/' + this.$library.AutoLoad)
+    await this.initialize()
+    await this.loadLibrary(this.$library.Path + '/' + this.$library.AutoLoad)
     this.Sections = []
 
     const src = this.Score
@@ -259,8 +259,8 @@ class Tokenizer {
     }
   }
 
-  loadLibrary(path, origin) {
-    const data = this.loadFile(path)
+  async loadLibrary(path, origin) {
+    const data = await this.loadFile(path)
     this.Syntax.loadSyntax(data)
     if (origin) {
       this.Library.push({
