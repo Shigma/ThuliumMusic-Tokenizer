@@ -109,6 +109,7 @@ class Tokenizer {
         break
 
       case 'end':
+        this.Library.push({ Type: 'end', Head: origin })
         break
 
       default:
@@ -264,7 +265,7 @@ class Tokenizer {
     this.Syntax.loadSyntax(data)
     if (origin) {
       this.Library.push({
-        Type: 'Package',
+        Type: 'include',
         Head: origin
       })
     }
