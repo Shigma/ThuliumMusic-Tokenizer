@@ -193,6 +193,7 @@ class TrackSyntax {
       FSM.include('alias'),
       FSM.include('proto'),
       FSM.include('note'),
+      FSM.include('section'),
       {
         patt: /^\}/,
         pop: true
@@ -250,7 +251,6 @@ class TrackSyntax {
           }
         }
       },
-      FSM.include('section'),
       FSM.item('PedalPress', /^&/),
       FSM.item('PedalRelease', /^\*/),
       FSM.item('Tie', /^\^/),

@@ -17,6 +17,13 @@ const funcTypes = [
   'ClassExpression'
 ]
 
+const methodTypes = [
+  'proGlobal',
+  'proMerge',
+  'epiNote',
+  'epiTrack'
+]
+
 class TmLibrary {
   /**
    * 判断函数是否无返回值
@@ -97,7 +104,7 @@ class TmLibrary {
   }
 
   static functionTokenize(lines) {
-    const code = lines.join('\n')
+    let code = lines.join('\n')
     const aliases = [], errors = [], warnings = []
     const dict = [], syntax = [], comments = []
 
@@ -163,15 +170,16 @@ class TmLibrary {
 
   static notationTokenize(lines) {
     const code = lines.join('\n')
-    const notation = [], errors = [], warnings = [], syntax = {}
+    const errors = [], warnings = [], syntax = {}, proEpi = []
     try {
       const result = acorn.parse(code, {ecmaVersion: 8})
       result.body.forEach(tok => {
         if (tok.type === 'ClassDeclaration') {
-          const decl = code.slice(tok.start, tok.end)
-          const data = eval(`new(${decl})()`)
+          const data = eval(`new(${code.slice(tok.start, tok.end)})()`)
           TmLibrary.loadContext(syntax, data.syntax)
-          notation.push({ Name: tok.id.name, Code: decl })
+          delete data.syntax
+          data.Name = tok.id.name
+          TmLibrary.loadClass(proEpi, [data])
         } else {
           errors.push({
             Err: 'NotClassDecl',
@@ -189,7 +197,7 @@ class TmLibrary {
     }
 
     return {
-      Notation: notation,
+      Class: proEpi,
       Context: syntax,
       Errors: errors,
       Warnings: warnings
@@ -227,6 +235,10 @@ class TmLibrary {
     TmLibrary.append(dest, src, 'Name')
   }
 
+  static loadClass(dest, src) {
+    TmLibrary.append(dest, src, 'Name')
+  }
+
   static loadContext(dest, src) {
     for (const context in src) {
       if (context in dest) {
@@ -239,3 +251,4 @@ class TmLibrary {
 }
 
 module.exports = TmLibrary
+

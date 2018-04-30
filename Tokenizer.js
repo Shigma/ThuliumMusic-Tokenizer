@@ -14,11 +14,11 @@ class TmSyntax {
     this.Dict = [] // Function Attributes
     this.Alias = [] // Function Aliases
     this.Chord = [] // Chord Operators
-    this.Notation = [] // Notations
-    this.Context = {
+    this.Class = [] // Prologs & Epilogs
+    this.Context = { // FSM Contexts
       section: [],
       default: []
-    } // FSM Contexts
+    }
   }
 
   load(data) {
