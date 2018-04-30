@@ -152,7 +152,7 @@ class AliasSyntax extends FSM {
   }
 }
 
-class Alias {
+class TmAlias {
   constructor(proto) {
     Object.assign(this, proto)
   }
@@ -205,4 +205,4 @@ class Alias {
 
 AliasSyntax.Pattern = /^(?: *prec(?:edence)?: *(\d+);)? *alias:(.+)$/i
 
-module.exports = {Alias, AliasSyntax}
+module.exports = {TmAlias, AliasSyntax}

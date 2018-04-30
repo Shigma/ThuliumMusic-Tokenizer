@@ -1,5 +1,6 @@
 const FSM = require('./Context')
-const {Alias} = require('./Alias')
+const {TmAlias} = require('./Alias')
+const TmLibrary = require('./Library')
 
 const ArgumentPatterns = {
   uns: {
@@ -60,8 +61,9 @@ class NoteSyntax {
 }
 
 class TrackSyntax extends FSM {
-  constructor(functions, aliases, chords, degrees) {
-    const name = functions.map(func => func.Name).join('|')
+  constructor(syntax, degrees) {
+    const name = syntax.Dict.map(func => func.Name).join('|')
+    const chords = syntax.Chord.map(chord => chord.Notation)
     const note = new NoteSyntax(chords, degrees)
     const dict = Object.assign({
       not: {
@@ -72,7 +74,6 @@ class TrackSyntax extends FSM {
     }, ArgumentPatterns)
 
     super({
-
       // Subtrack & Macrotrack & PlainFunction
       prototype: [
         {
@@ -102,7 +103,7 @@ class TrackSyntax extends FSM {
               Name: match[1],
               Alias: -1,
               Args: content,
-              VoidQ: functions.find(func => func.Name === match[1]).VoidQ
+              VoidQ: syntax.Dict.find(func => func.Name === match[1]).VoidQ
             }
           }
         },
@@ -185,28 +186,7 @@ class TrackSyntax extends FSM {
 
       // Section Notations
       section: [
-        FSM.item('RepeatEndBegin', /^:\|\|:/),
-        FSM.item('RepeatBegin', /^\|\|:/),
-        FSM.item('RepeatEnd', /^:\|\|/),
         FSM.item('LocalIndicator', /^!/),
-        {
-          patt: /^\[(?=(\d+(~\d+)?\. *)+\])/,
-          push: FSM.next('volta', /^\]/),
-          token(match, content) {
-            return {
-              Type: 'volta',
-              Order: [].concat(...content)
-            }
-          }
-        },
-        FSM.item('Coda', /^\+/),
-        FSM.item('Coda', /^Coda/),
-        FSM.item('Coda', /^ToCoda/),
-        FSM.item('Segno', /^s/),
-        FSM.item('Segno', /^Segno/),
-        FSM.item('DaCapo', /^DC/),
-        FSM.item('DaSegno', /^DS/),
-        FSM.item('Fine', /^Fine/)
       ],
 
       // Track Contents
@@ -228,7 +208,7 @@ class TrackSyntax extends FSM {
               Name: match[1],
               Alias: 0,
               Args: content,
-              VoidQ: functions.find(func => func.Name === match[1]).VoidQ
+              VoidQ: syntax.Dict.find(func => func.Name === match[1]).VoidQ
             }
           }
         },
@@ -308,35 +288,11 @@ class TrackSyntax extends FSM {
         },
         FSM.item('Expression', /^([+\-]?\d+([./]\d+)?|Log2\(\d+\)([+\-]\d+)?)/),
         FSM.include('prototype')
-      ],
-
-      // Volta Numbers
-      volta: [
-        {
-          patt: /(\d+)~(\d+)/,
-          token(match) {
-            const result = []
-            for (let i = parseInt(match[1]); i <= parseInt(match[2]); i++) {
-              result.push(i)
-            }
-            return result
-          }
-        },
-        {
-          patt: /\d+/,
-          token: match => parseInt(match[0])
-        },
-        {
-          patt: /^, */
-        },
-        {
-          patt: /^\. */
-        }
       ]
-
     })
 
-    this.Contexts.alias = aliases.map(alias => new Alias(alias).build(dict))
+    this.Contexts.alias = syntax.Alias.map(alias => new TmAlias(alias).build(dict))
+    TmLibrary.loadContext(this.Contexts, syntax.Context)
   }
 }
 
