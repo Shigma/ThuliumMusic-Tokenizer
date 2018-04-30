@@ -44,7 +44,7 @@ class FSM {
     let valid = true, index = 0
     let result = [], warnings = []
     const syntax = this.getContext(state)
-
+    
     while (string.length > 0) {
       let i, pop = false
       for (i = 0; i < syntax.length; i++) {
@@ -109,6 +109,7 @@ class FSM {
     let result
     if (typeof state === 'string') {
       result = this.Contexts[state]
+      if (result === undefined) throw new Error()
     } else {
       result = state
     }

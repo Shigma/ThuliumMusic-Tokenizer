@@ -14,29 +14,24 @@ class TmSyntax {
     this.Dict = [] // Function Attributes
     this.Alias = [] // Function Aliases
     this.Chord = [] // Chord Operators
-    this.Context = [] // Notation Contexts
-    this.Namespace = [] // Namespace Data
+    this.Class = [] // Prologs & Epilogs
+    this.Context = { // FSM Contexts
+      section: [],
+      default: []
+    }
   }
 
-  loadSyntax(data) {
-    if (data.Code) this.Code += data.Code
-    if (data.Chord) this.Chord.push(...data.Chord)
-    if (data.Dict) this.Dict.push(...data.Dict)
-    if (data.Alias) this.Alias.push(...data.Alias)
-    if (data.Namespace) this.Namespace.push(...data.Namespace)
-    if (data.Context) {
-      for (const context in data.Context) {
-        if (context in this.Context) {
-          this.Context[context].push(...data.Context[context])
-        } else {
-          this.Context[context] = data.Context[context]
-        }
+  load(data) {
+    for (const key in this) {
+      if (data[key] !== undefined) {
+        const result = TmLibrary['load' + key](this[key], data[key])
+        if (result !== undefined) this[key] = result
       }
     }
   }
 }
 
-class Tokenizer {
+class TmTokenizer {
   static startsTrue(src, ptr, match, blank = true) {
     return ptr < src.length && (
       src[ptr].startsWith(match) ||
@@ -75,13 +70,13 @@ class Tokenizer {
     const src = this.Source
 
     // Comments
-    while (Tokenizer.startsTrue(src, ptr, '//', false)) {
+    while (TmTokenizer.startsTrue(src, ptr, '//', false)) {
       this.Comment.push(src[ptr].slice(2))
       ptr += 1
     }
 
     // Libraries
-    while (Tokenizer.startsTrue(src, ptr, '#')) {
+    while (TmTokenizer.startsTrue(src, ptr, '#')) {
       const origin = src[ptr]
       const command = origin.match(/[a-zA-Z]+/)
       ptr += 1
@@ -101,7 +96,7 @@ class Tokenizer {
       case 'function':
       case 'notation':
         const lines = []
-        while (Tokenizer.startsFalse(src, ptr, '#')) {
+        while (TmTokenizer.startsFalse(src, ptr, '#')) {
           lines.push(src[ptr])
           ptr += 1
         }
@@ -138,7 +133,7 @@ class Tokenizer {
     let comment = []
 
     while (ptr < src.length) {
-      if (Tokenizer.startsTrue(src, ptr, '//')) {
+      if (TmTokenizer.startsTrue(src, ptr, '//')) {
         blank += 1
         if (blank >= 2 && tracks.length !== 0) {
           this.Sections.push(this.tokenizeSection(tracks, comment))
@@ -152,7 +147,7 @@ class Tokenizer {
       } else {
         let code = src[ptr]
         ptr += 1
-        while (Tokenizer.startsFalse(src, ptr, '//', true)) {
+        while (TmTokenizer.startsFalse(src, ptr, '//', true)) {
           code += '\n' + src[ptr]
           ptr += 1
         }
@@ -172,15 +167,12 @@ class Tokenizer {
     let name, play = true, inst = [], degrees = ['0', '%']
     const instrDegrees = ['1', '2', '3', '4', '5', '6', '7']
     const drumDegrees = ['x']
-    const functions = this.Syntax.Dict
-    const aliases = this.Syntax.Alias
-    const chords = this.Syntax.Chord.map(chord => chord.Notation)
     const meta = track.match(/^<(?:(:)?([a-zA-Z][a-zA-Z\d]*):)?/)
 
     if (meta) {
       play = !meta[1]
       name = meta[2]
-      const syntax = new TrackSyntax(functions, aliases, chords, degrees)
+      const syntax = new TrackSyntax(this.Syntax)
       track = track.slice(meta[0].length)
       const data = syntax.tokenize(track, 'meta')
       data.Content.forEach(tok => {
@@ -212,7 +204,7 @@ class Tokenizer {
     if (degrees.length === 2) {
       degrees = ['1', '2', '3', '4', '5', '6', '7', '0', '%']
     }
-    const syntax = new TrackSyntax(functions, aliases, chords, degrees)
+    const syntax = new TrackSyntax(this.Syntax, degrees)
     const result = syntax.tokenize(track, 'default')
 
     return {
@@ -262,7 +254,7 @@ class Tokenizer {
 
   loadLibrary(path, origin) {
     const data = this.loadFile(path)
-    this.Syntax.loadSyntax(data)
+    this.Syntax.load(data)
     if (origin) {
       this.Library.push({
         Type: 'include',
@@ -273,7 +265,7 @@ class Tokenizer {
 
   mergeLibrary(head, source, type) {
     const data = TmLibrary[type + 'Tokenize'](source)
-    this.Syntax.loadSyntax(data)
+    this.Syntax.load(data)
     this.Errors.push(...data.Errors)
     this.Warnings.push(...data.Warnings)
     this.Library.push({
@@ -284,4 +276,4 @@ class Tokenizer {
   }
 }
 
-module.exports = Tokenizer
+module.exports = TmTokenizer

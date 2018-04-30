@@ -1,4 +1,5 @@
 const acorn = require('acorn')
+const FSM = require('./Context')
 const {AliasSyntax} = require('./Alias')
 
 const int = '([+\\-]?\\d+)'
@@ -16,7 +17,14 @@ const funcTypes = [
   'ClassExpression'
 ]
 
-class LibTokenizer {
+const methodTypes = [
+  'proGlobal',
+  'proMerge',
+  'epiNote',
+  'epiTrack'
+]
+
+class TmLibrary {
   /**
    * 判断函数是否无返回值
    * @param {ESTree.FunctionDeclaration} funcAST 函数声明节点
@@ -96,14 +104,16 @@ class LibTokenizer {
   }
 
   static functionTokenize(lines) {
-    const code = lines.join('\n')
+    let code = lines.join('\n')
     const aliases = [], errors = [], warnings = []
-    const dict = [], syntax = []
+    const dict = [], syntax = [], comments = []
+
     try {
       const result = acorn.parse(code, {
         ecmaVersion: 8,
         onComment(isBlock, text, start, end) {
           const result = AliasSyntax.Pattern.exec(text)
+          comments.push({start, end})
           if (!isBlock && result) {
             const alias = new AliasSyntax(text)
             if (alias.analyze()) {
@@ -117,11 +127,8 @@ class LibTokenizer {
       result.body.forEach(tok => {
         if (tok.type === 'FunctionDeclaration') {
           const name = tok.id.name
-          const voidQ = LibTokenizer.isVoid(tok)
-          dict.push({
-            Name: name,
-            VoidQ: voidQ
-          })
+          const voidQ = TmLibrary.isVoid(tok)
+          dict.push({ Name: name, VoidQ: voidQ })
           let order = 0
           for (let i = 0; i < syntax.length; i++) {
             if (tok.body.start < syntax[i].start && tok.body.end > syntax[i].end) {
@@ -142,6 +149,9 @@ class LibTokenizer {
           })
         }
       })
+      for (let i = comments.length - 1; i >= 0; i--) {
+        code = code.slice(0, comments[i].start) + code.slice(comments[i].end)
+      }
     } catch (err) {
       errors.push({
         Err: 'SyntaxError',
@@ -160,25 +170,16 @@ class LibTokenizer {
 
   static notationTokenize(lines) {
     const code = lines.join('\n')
-    const namespace = [], errors = [], warnings = [], syntax = {}
+    const errors = [], warnings = [], syntax = {}, proEpi = []
     try {
       const result = acorn.parse(code, {ecmaVersion: 8})
       result.body.forEach(tok => {
         if (tok.type === 'ClassDeclaration') {
-          const declaration = code.slice(tok.start, tok.end)
-          const data = eval(`new (${declaration})()`)
-          namespace.push({
-            Name: tok.id.name,
-            Code: declaration,
-            Include: data.Include
-          })
-          for (const context in data.Syntax) {
-            if (context in syntax) {
-              syntax[context].push(...data.Syntax[context])
-            } else {
-              syntax[context] = data.Syntax[context]
-            }
-          }
+          const data = eval(`new(${code.slice(tok.start, tok.end)})()`)
+          TmLibrary.loadContext(syntax, data.syntax)
+          delete data.syntax
+          data.Name = tok.id.name
+          TmLibrary.loadClass(proEpi, [data])
         } else {
           errors.push({
             Err: 'NotClassDecl',
@@ -196,12 +197,58 @@ class LibTokenizer {
     }
 
     return {
-      NameSpace: namespace,
-      Syntax: syntax,
+      Class: proEpi,
+      Context: syntax,
       Errors: errors,
       Warnings: warnings
     }
   }
+
+  static append(dest, src, tag) {
+    for (const item of src) {
+      const index = dest.findIndex(ori => ori[tag] === item[tag])
+      if (index === -1) {
+        dest.push(item)
+      } else {
+        dest.splice(index, 1, item)
+      }
+    }
+  }
+
+  static loadCode(dest, src) {
+    return dest + src
+  }
+
+  static loadDict(dest, src) {
+    TmLibrary.append(dest, src, 'Name')
+  }
+
+  static loadAlias(dest, src) {
+    TmLibrary.append(dest, src, 'Source')
+  }
+
+  static loadChord(dest, src) {
+    TmLibrary.append(dest, src, 'Notation')
+  }
+
+  static loadNotation(dest, src) {
+    TmLibrary.append(dest, src, 'Name')
+  }
+
+  static loadClass(dest, src) {
+    TmLibrary.append(dest, src, 'Name')
+  }
+
+  static loadContext(dest, src) {
+    for (const context in src) {
+      if (context in dest) {
+        dest[context].push(...src[context])
+      } else {
+        dest[context] = src[context]
+      }
+    }
+  }
 }
 
-module.exports = LibTokenizer
+module.exports = TmLibrary
+
