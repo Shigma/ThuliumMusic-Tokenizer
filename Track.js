@@ -60,8 +60,8 @@ class NoteSyntax {
   }
 }
 
-class TrackSyntax extends FSM {
-  constructor(syntax, degrees) {
+class TrackSyntax {
+  constructor(syntax, degrees = []) {
     const name = syntax.Dict.map(func => func.Name).join('|')
     const chords = syntax.Chord.map(chord => chord.Notation)
     const note = new NoteSyntax(chords, degrees)
@@ -73,226 +73,226 @@ class TrackSyntax extends FSM {
       }
     }, ArgumentPatterns)
 
-    super({
-      // Subtrack & Macrotrack & PlainFunction
-      prototype: [
-        {
-          patt: /^\{(?:(\d+)\*)?/,
-          push: 'default',
-          token(match, content) {
-            let repeat
-            if (match[1] !== undefined) {
-              repeat = parseInt(match[1])
-            } else {
-              const volta = content.filter(tok => tok.Type === 'BarLine' && tok.Order[0] > 0)
-              repeat = Math.max(-1, ...volta.map(tok => Math.max(...tok.Order)))
-            }
-            return {
-              Type: 'Subtrack',
-              Repeat: repeat,
-              Content: content
-            }
+    // Subtrack & Macrotrack & PlainFunction
+    this.proto = [
+      {
+        patt: /^\{(?:(\d+)\*)?/,
+        push: 'default',
+        token(match, content) {
+          let repeat
+          if (match[1] !== undefined) {
+            repeat = parseInt(match[1])
+          } else {
+            const volta = content.filter(tok => tok.Type === 'BarLine' && tok.Order[0] > 0)
+            repeat = Math.max(-1, ...volta.map(tok => Math.max(...tok.Order)))
           }
-        },
-        {
-          patt: new RegExp(`^(${name})\\(`),
-          push: 'argument',
-          token(match, content) {
-            return {
-              Type: 'Function',
-              Name: match[1],
-              Alias: -1,
-              Args: content,
-              VoidQ: syntax.Dict.find(func => func.Name === match[1]).VoidQ
-            }
-          }
-        },
-        {
-          patt: /^@([a-zA-Z]\w*)/,
-          token(match) {
-            return {
-              Type: 'Macrotrack',
-              Name: match[1]
-            }
+          return {
+            Type: 'Subtrack',
+            Repeat: repeat,
+            Content: content
           }
         }
-      ],
-
-      note: [
-        {
-          patt: new RegExp('^' + note.deg + note.in + note.out),
-          token(match) {
-            return {
-              Type: 'Note',
-              Pitches: [
-                {
-                  Degree: match[1],
-                  PitOp: match[2],
-                  Chord: match[3],
-                  VolOp: match[4]
-                }
-              ],
-              PitOp: '',
-              Chord: '',
-              VolOp: '',
-              DurOp: match[5],
-              Stac: match[6].length
-            }
-          }
-        },
-        {
-          patt: new RegExp('^' + note.sqr + note.in + note.out),
-          token(match) {
-            const inner = new RegExp(note.deg + note.in)
-            const match1 = match[1].match(new RegExp(inner, 'g'))
-            return {
-              Type: 'Note',
-              Pitches: match1.map(str => {
-                const match = inner.exec(str)
-                return {
-                  Degree: match[1],
-                  PitOp: match[2],
-                  Chord: match[3],
-                  VolOp: match[4]
-                }
-              }),
-              PitOp: match[2],
-              Chord: match[3],
-              VolOp: match[4],
-              DurOp: match[5],
-              Stac: match[6].length
-            }
+      },
+      {
+        patt: new RegExp(`^(${name})\\(`),
+        push: 'argument',
+        token(match, content) {
+          return {
+            Type: 'Function',
+            Name: match[1],
+            Alias: -1,
+            Args: content,
+            VoidQ: syntax.Dict.find(func => func.Name === match[1]).VoidQ
           }
         }
-      ],
-
-      meta: [
-        {
-          patt: /^>/,
-          pop: true
-        },
-        {
-          patt: /([a-zA-Z][a-zA-Z\d]*)/,
-          push: FSM.next('default', /^(?=>)/, /^,\s*/),
-          token(match, content) {
-            return {
-              Type: '@inst',
-              name: match[1],
-              spec: content
-            }
+      },
+      {
+        patt: /^@([a-zA-Z]\w*)/,
+        token(match) {
+          return {
+            Type: 'Macrotrack',
+            Name: match[1]
           }
         }
-      ],
+      }
+    ];
 
-      // Section Notations
-      section: [
-        FSM.item('LocalIndicator', /^!/),
-      ],
+    this.note = degrees.length === 0 ? [] : [
+      {
+        patt: new RegExp('^' + note.deg + note.in + note.out),
+        token(match) {
+          return {
+            Type: 'Note',
+            Pitches: [
+              {
+                Degree: match[1],
+                PitOp: match[2],
+                Chord: match[3],
+                VolOp: match[4]
+              }
+            ],
+            PitOp: '',
+            Chord: '',
+            VolOp: '',
+            DurOp: match[5],
+            Stac: match[6].length
+          }
+        }
+      },
+      {
+        patt: new RegExp('^' + note.sqr + note.in + note.out),
+        token(match) {
+          const inner = new RegExp(note.deg + note.in)
+          const match1 = match[1].match(new RegExp(inner, 'g'))
+          return {
+            Type: 'Note',
+            Pitches: match1.map(str => {
+              const match = inner.exec(str)
+              return {
+                Degree: match[1],
+                PitOp: match[2],
+                Chord: match[3],
+                VolOp: match[4]
+              }
+            }),
+            PitOp: match[2],
+            Chord: match[3],
+            VolOp: match[4],
+            DurOp: match[5],
+            Stac: match[6].length
+          }
+        }
+      }
+    ];
 
-      // Track Contents
-      default: [
-        FSM.include('section'),
-        FSM.include('alias'),
-        FSM.include('prototype'),
-        FSM.include('note'),
-        {
-          patt: /^\}/,
-          pop: true
-        },
-        {
-          patt: new RegExp(`^\\((${name}):`),
-          push: 'argument',
-          token(match, content) {
-            return {
-              Type: 'Function',
-              Name: match[1],
-              Alias: 0,
-              Args: content,
-              VoidQ: syntax.Dict.find(func => func.Name === match[1]).VoidQ
-            }
+    this.meta = [
+      {
+        patt: /^>/,
+        pop: true
+      },
+      {
+        patt: /([a-zA-Z][a-zA-Z\d]*)/,
+        push: FSM.next('default', /^(?=>)/, /^,\s*/),
+        token(match, content) {
+          return {
+            Type: '@inst',
+            name: match[1],
+            spec: content
+          }
+        }
+      }
+    ];
+
+    // Section Notations
+    this.section = [
+      FSM.item('LocalIndicator', /^!/)
+    ];
+
+    // Track Contents
+    this.default = [
+      FSM.include('alias'),
+      FSM.include('proto'),
+      FSM.include('note'),
+      {
+        patt: /^\}/,
+        pop: true
+      },
+      {
+        patt: new RegExp(`^\\((${name}):`),
+        push: 'argument',
+        token(match, content) {
+          return {
+            Type: 'Function',
+            Name: match[1],
+            Alias: 0,
+            Args: content,
+            VoidQ: syntax.Dict.find(func => func.Name === match[1]).VoidQ
+          }
+        }
+      },
+      {
+        patt: /^\\(?=(\d+(~\d+)?(, *\d+(~\d+)?)*)?:)/,
+        push: FSM.next('volta', /^:/),
+        token(match, content) {
+          return {
+            Type: 'BarLine',
+            Skip: false,
+            Overlay: false,
+            Order: [].concat(...content)
           }
         },
-        {
-          patt: /^\\(?=(\d+(~\d+)?(, *\d+(~\d+)?)*)?:)/,
-          push: FSM.next('volta', /^:/),
-          token(match, content) {
-            return {
-              Type: 'BarLine',
-              Skip: false,
-              Overlay: false,
-              Order: [].concat(...content)
-            }
+        locate: false
+      },
+      {
+        patt: /^(\/|\||\\)/,
+        token(match) {
+          return {
+            Type: 'BarLine',
+            Skip: match[0] === '\\',
+            Overlay: match[0] === '/',
+            Order: [0]
+          }
+        }
+      },
+      {
+        patt: /^<\*/,
+        push: [
+          {
+            patt: /^\*>/,
+            pop: true
           },
-          locate: false
-        },
-        {
-          patt: /^(\/|\||\\)/,
-          token(match) {
-            return {
-              Type: 'BarLine',
-              Skip: match[0] === '\\',
-              Overlay: match[0] === '/',
-              Order: [0]
-            }
+          FSM.item('@literal', /^(.)/)
+        ],
+        token(match, content) {
+          return {
+            Type: 'Comment',
+            Content: content.map(tok => tok.Content).join('')
           }
-        },
-        {
-          patt: /^<\*/,
-          push: [
-            {
-              patt: /^\*>/,
-              pop: true
-            },
-            FSM.item('@literal', /^(.)/)
-          ],
-          token(match, content) {
-            return {
-              Type: 'Comment',
-              Content: content.map(tok => tok.Content).join('')
-            }
-          }
-        },
-        FSM.item('PedalPress', /^&/),
-        FSM.item('PedalRelease', /^\*/),
-        FSM.item('Tie', /^\^/),
-        FSM.item('Space', /^(\s+)/)
-      ],
+        }
+      },
+      FSM.include('section'),
+      FSM.item('PedalPress', /^&/),
+      FSM.item('PedalRelease', /^\*/),
+      FSM.item('Tie', /^\^/),
+      FSM.item('Space', /^(\s+)/)
+    ];
 
-      // Plain Function Arguments
-      argument: [
-        {
-          patt: /^\)/,
-          pop: true
-        },
-        {
-          patt: /^, */
-        },
-        {
-          patt: /^\[/,
-          push: FSM.next('argument', /^\]/),
-          token(match, content) {
-            return {
-              Type: 'Array',
-              Content: content
-            }
+    this.argument = [
+      {
+        patt: /^\)/,
+        pop: true
+      },
+      {
+        patt: /^, */
+      },
+      {
+        patt: /^\[/,
+        push: FSM.next('argument', /^\]/),
+        token(match, content) {
+          return {
+            Type: 'Array',
+            Content: content
           }
-        },
-        {
-          patt: /^"(([^\{\}\(\)\[\]\"\,]|\\.)*)"/,
-          token(match) {
-            return {
-              Type: 'String',
-              Content: match[1].replace(/\\(?=.)/, '')
-            }
+        }
+      },
+      {
+        patt: /^"(([^\{\}\(\)\[\]\"\,]|\\.)*)"/,
+        token(match) {
+          return {
+            Type: 'String',
+            Content: match[1].replace(/\\(?=.)/, '')
           }
-        },
-        FSM.item('Expression', /^([+\-]?\d+([./]\d+)?|Log2\(\d+\)([+\-]\d+)?)/),
-        FSM.include('prototype')
-      ]
-    })
+        }
+      },
+      FSM.item('Expression', /^([+\-]?\d+([./]\d+)?|Log2\(\d+\)([+\-]\d+)?)/),
+      FSM.include('proto')
+    ]
+    this.alias = syntax.Alias.map(alias => new TmAlias(alias).build(dict))
+    TmLibrary.loadContext(this, syntax.Context)
+  }
 
-    this.Contexts.alias = syntax.Alias.map(alias => new TmAlias(alias).build(dict))
-    TmLibrary.loadContext(this.Contexts, syntax.Context)
+  tokenize(string, state, epi = true) {
+    return new FSM(this).tokenize(string, state, epi);
   }
 }
 

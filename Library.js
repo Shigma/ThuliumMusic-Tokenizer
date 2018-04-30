@@ -1,4 +1,5 @@
 const acorn = require('acorn')
+const FSM = require('./Context')
 const {AliasSyntax} = require('./Alias')
 
 const int = '([+\\-]?\\d+)'
@@ -168,7 +169,7 @@ class TmLibrary {
       result.body.forEach(tok => {
         if (tok.type === 'ClassDeclaration') {
           const decl = code.slice(tok.start, tok.end)
-          const data = eval(`new (${declaration})()`)
+          const data = eval(`new(${decl})()`)
           TmLibrary.loadContext(syntax, data.syntax)
           notation.push({ Name: tok.id.name, Code: decl })
         } else {

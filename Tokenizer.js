@@ -172,7 +172,7 @@ class TmTokenizer {
     if (meta) {
       play = !meta[1]
       name = meta[2]
-      const syntax = new TrackSyntax(this.Syntax, [])
+      const syntax = new TrackSyntax(this.Syntax)
       track = track.slice(meta[0].length)
       const data = syntax.tokenize(track, 'meta')
       data.Content.forEach(tok => {
