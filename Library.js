@@ -160,7 +160,7 @@ class LibTokenizer {
 
   static notationTokenize(lines) {
     const code = lines.join('\n')
-    const namespace = [], errors = [], warnings = [], syntax = {};
+    const namespace = [], errors = [], warnings = [], syntax = {}
     try {
       const result = acorn.parse(code, {ecmaVersion: 8})
       result.body.forEach(tok => {
@@ -205,4 +205,3 @@ class LibTokenizer {
 }
 
 module.exports = LibTokenizer
-

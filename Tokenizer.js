@@ -60,9 +60,9 @@ class Tokenizer {
     this.Syntax = new TmSyntax()
 
     this.Source = input.split(/\r?\n/g)
-    this.loadFile = loader.loadFile;
-    this.$library = loader.$library;
-    this.$directory = loader.$directory;
+    this.loadFile = loader.loadFile
+    this.$library = loader.$library
+    this.$directory = loader.$directory
 
     this.$init = false
     this.$token = false
@@ -109,6 +109,7 @@ class Tokenizer {
         break
 
       case 'end':
+        this.Library.push({ Type: 'end', Head: origin })
         break
 
       default:
@@ -264,7 +265,7 @@ class Tokenizer {
     this.Syntax.loadSyntax(data)
     if (origin) {
       this.Library.push({
-        Type: 'Package',
+        Type: 'include',
         Head: origin
       })
     }
