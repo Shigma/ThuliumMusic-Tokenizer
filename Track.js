@@ -188,6 +188,26 @@ class TrackSyntax {
       FSM.item('LocalIndicator', /^!/)
     ];
 
+    this.volta = [
+      {
+        patt: /^(\d+)~(\d+)/,
+        token(match) {
+          const result = []
+          for (let i = parseInt(match[1]); i <= parseInt(match[2]); i++) {
+            result.push(i)
+          }
+          return result
+        }
+      },
+      {
+        patt: /^\d+/,
+        token: match => parseInt(match[0])
+      },
+      {
+        patt: /^[.,] */
+      }
+    ];
+
     // Track Contents
     this.default = [
       FSM.include('alias'),
