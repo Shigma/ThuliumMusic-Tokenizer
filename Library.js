@@ -170,15 +170,17 @@ class TmLibrary {
 
   static notationTokenize(lines) {
     const code = lines.join('\n')
-    const errors = [], warnings = [], syntax = {}, proEpi = []
+    const errors = [], warnings = [], syntax = {}, proEpi = [], types = {}
     try {
       const result = acorn.parse(code, {ecmaVersion: 8})
       result.body.forEach(tok => {
         if (tok.type === 'ClassDeclaration') {
           const data = eval(`new(${code.slice(tok.start, tok.end)})()`)
-          TmLibrary.loadContext(syntax, data.syntax)
-          delete data.syntax
+          // FIXME: test for types
           data.Name = tok.id.name
+          TmLibrary.loadContext(syntax, data.syntax)
+          TmLibrary.loadTypes(types, data.attributes, data.Name)
+          delete data.syntax
           TmLibrary.loadClass(proEpi, [data])
         } else {
           errors.push({
@@ -190,6 +192,7 @@ class TmLibrary {
         }
       })
     } catch (err) {
+      throw err
       errors.push({
         Err: 'SyntaxError',
         Info: err
@@ -197,6 +200,7 @@ class TmLibrary {
     }
 
     return {
+      Types: types,
       Class: proEpi,
       Context: syntax,
       Errors: errors,
@@ -237,6 +241,13 @@ class TmLibrary {
 
   static loadClass(dest, src) {
     TmLibrary.append(dest, src, 'Name')
+  }
+
+  static loadTypes(dest, src, name = false) {
+    for (const type in src) {
+      dest[type] = src[type]
+      if (name) dest[type].class = name
+    }
   }
 
   static loadContext(dest, src) {

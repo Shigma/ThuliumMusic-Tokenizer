@@ -15,6 +15,7 @@ class TmSyntax {
     this.Alias = [] // Function Aliases
     this.Chord = [] // Chord Operators
     this.Class = [] // Prologs & Epilogs
+    this.Types = {} // Token Types
     this.Context = { // FSM Contexts
       section: [],
       default: []
@@ -124,6 +125,7 @@ class TmTokenizer {
   tokenize(forced = false) {
     if (this.$token && !forced) return this.Sections
     this.initialize()
+
     this.loadLibrary(this.$library.Path + '/' + this.$library.AutoLoad)
     this.Sections = []
 

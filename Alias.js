@@ -179,13 +179,12 @@ class TmAlias {
       token(match) {
         const args = []
         index.forEach((tok, index) => {
-          let result = match[index + 1]
-          if (dict[tok.Class].epilog) {
-            result = dict[tok.Class].epilog(result)
-          }
+          const origin = match[index + 1]
+          const result = dict[tok.Class].epilog ? dict[tok.Class].epilog(origin) : origin;
           args[tok.Id] = {
             Type: dict[tok.Class].meta,
-            Content: result
+            Content: result,
+            Origin: origin
           }
         })
         return {
