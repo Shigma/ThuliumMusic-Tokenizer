@@ -1,4 +1,5 @@
 const TmLibrary = require('./Library')
+const MetaSyntax = require('./Meta')
 const TrackSyntax = require('./Track')
 const FSM = require('./Context')
 
@@ -125,7 +126,6 @@ class TmTokenizer {
   tokenize(forced = false) {
     if (this.$token && !forced) return this.Sections
     this.initialize()
-
     this.loadLibrary(this.$library.Path + '/' + this.$library.AutoLoad)
     this.Sections = []
 
@@ -174,7 +174,7 @@ class TmTokenizer {
     if (meta) {
       play = !meta[1]
       name = meta[2]
-      const syntax = new TrackSyntax(this.Syntax, instrDegrees)
+      const syntax = new MetaSyntax(this.Syntax)
       track = track.slice(meta[0].length)
       const data = syntax.tokenize(track, 'meta')
       data.Content.forEach(tok => {

@@ -1,5 +1,6 @@
 const FSM = require('./Context')
 const {TmAlias} = require('./Alias')
+const NoteSyntax = require('./Note')
 const TmLibrary = require('./Library')
 
 const ArgumentPatterns = {
@@ -33,34 +34,6 @@ const ArgumentPatterns = {
   }
 }
 
-class NoteSyntax {
-  constructor(chords, degrees) {
-    const degree = NoteSyntax.ArrayToRegex(degrees, false)
-    const chord = NoteSyntax.ArrayToRegex(chords, true)
-    const pitOp = "[#b',]*"
-    const durOp = '[._=-]*'
-    const volOp = '[>:]*'
-    const epilog = '[`]*'
-    const inner = `(?:${pitOp}${chord}${volOp})`
-    const outer = `(?:${durOp}${epilog})`
-    this.deg = `(${degree})`
-    this.in = `(${pitOp})(${chord})(${volOp})`
-    this.out = `(${durOp})(${epilog})`
-    this.sqr = `\\[((?:${degree}${inner})+)\\]`
-    this.pit = `(${degree}${pitOp}${chord}${volOp})`
-    this.Patt = `(?:(?:\\[(?:${degree}${inner})+\\]|${degree})${inner}${outer})`
-  }
-
-  static ArrayToRegex(array, multi = true) {
-    let charset = '', quantifier = ''
-    if (array.length > 0) {
-      if (multi) quantifier = '*'
-      charset = '[' + array.join('') + ']'
-    }
-    return charset + quantifier
-  }
-}
-
 class TrackSyntax {
   constructor(syntax, degrees = []) {
     const name = syntax.Dict.map(func => func.Name).join('|')
@@ -68,11 +41,14 @@ class TrackSyntax {
     const note = new NoteSyntax(chords, degrees)
     const dict = Object.assign({
       not: {
-        patt: '(' + note.Patt + '+)',
+        patt: '(' + note.pattern() + '+)',
         meta: 'Subtrack',
         epilog: arg => this.tokenize(arg, 'note').Content
       }
     }, ArgumentPatterns)
+
+    // Notes
+    this.note = note.context()
 
     // Non-alias Functions
     this.nonalias = [
@@ -134,115 +110,6 @@ class TrackSyntax {
         }
       },
       FSM.include('nonalias')
-    ];
-
-    this.note = degrees.length === 0 ? [] : [
-      {
-        patt: new RegExp('^' + note.deg + note.in + note.out),
-        token(match) {
-          return {
-            Type: 'Note',
-            Pitches: [
-              {
-                Degree: match[1],
-                PitOp: match[2],
-                Chord: match[3],
-                VolOp: match[4]
-              }
-            ],
-            PitOp: '',
-            Chord: '',
-            VolOp: '',
-            DurOp: match[5],
-            Stac: match[6].length
-          }
-        }
-      },
-      {
-        patt: new RegExp('^' + note.sqr + note.in + note.out),
-        token(match) {
-          const inner = new RegExp(note.deg + note.in)
-          const match1 = match[1].match(new RegExp(inner, 'g'))
-          return {
-            Type: 'Note',
-            Pitches: match1.map(str => {
-              const match = inner.exec(str)
-              return {
-                Degree: match[1],
-                PitOp: match[2],
-                Chord: match[3],
-                VolOp: match[4]
-              }
-            }),
-            PitOp: match[2],
-            Chord: match[3],
-            VolOp: match[4],
-            DurOp: match[5],
-            Stac: match[6].length
-          }
-        }
-      }
-    ];
-
-    this.meta = [
-      {
-        patt: /^>/,
-        pop: true
-      },
-      {
-        patt: /^(\s*)([a-zA-Z][a-zA-Z\d]*)/,
-        push: [
-          {
-            patt: /^(?=>)/,
-            pop: true
-          },
-          {
-            patt: /^,/,
-            pop: true
-          },
-          FSM.include('alias'),
-          FSM.include('nonalias'),
-          FSM.item('Macropitch', /^\[([a-zA-Z])\]/),
-          {
-            patt: /^\[([a-zA-Z])=/,
-            push: [
-              {
-                patt: /^\]/,
-                pop: true
-              },
-              {
-                patt: new RegExp('^' + note.pit),
-                token(match) {
-                  return {
-                    Degree: match[1],
-                    PitOp: match[2],
-                    Chord: match[3],
-                    VolOp: match[4]
-                  }
-                }
-              }
-            ],
-            token(match, content) {
-              return {
-                Type: 'Macropitch',
-                Content: match[1],
-                Pitches: content
-              }
-            }
-          },
-          FSM.item('Space', /^(\s+)/)
-        ],
-        token(match, content) {
-          console.log(content)
-          return {
-            Type: '@inst',
-            name: match[2],
-            spec: content.filter(tok => tok.Type !== 'Macropitch'),
-            dict: content.filter(tok => tok.Type === 'Macropitch'),
-            space: match[1]
-          }
-        }
-      }
     ];
 
     // Section Notations
