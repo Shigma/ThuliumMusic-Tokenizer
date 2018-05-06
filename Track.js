@@ -47,6 +47,7 @@ class NoteSyntax {
     this.in = `(${pitOp})(${chord})(${volOp})`
     this.out = `(${durOp})(${epilog})`
     this.sqr = `\\[((?:${degree}${inner})+)\\]`
+    this.pit = `(${degree}${pitOp}${chord}${volOp})`
     this.Patt = `(?:(?:\\[(?:${degree}${inner})+\\]|${degree})${inner}${outer})`
   }
 
@@ -73,6 +74,36 @@ class TrackSyntax {
       }
     }, ArgumentPatterns)
 
+    // Non-alias Functions
+    this.nonalias = [
+      {
+        patt: new RegExp(`^(${name})\\(`),
+        push: 'argument',
+        token(match, content) {
+          return {
+            Type: 'Function',
+            Name: match[1],
+            Alias: -1,
+            Args: content,
+            VoidQ: syntax.Dict.find(func => func.Name === match[1]).VoidQ
+          }
+        }
+      },
+      {
+        patt: new RegExp(`^\\((${name}):`),
+        push: 'argument',
+        token(match, content) {
+          return {
+            Type: 'Function',
+            Name: match[1],
+            Alias: 0,
+            Args: content,
+            VoidQ: syntax.Dict.find(func => func.Name === match[1]).VoidQ
+          }
+        }
+      }
+    ]
+
     // Subtrack & Macrotrack & PlainFunction
     this.proto = [
       {
@@ -94,19 +125,6 @@ class TrackSyntax {
         }
       },
       {
-        patt: new RegExp(`^(${name})\\(`),
-        push: 'argument',
-        token(match, content) {
-          return {
-            Type: 'Function',
-            Name: match[1],
-            Alias: -1,
-            Args: content,
-            VoidQ: syntax.Dict.find(func => func.Name === match[1]).VoidQ
-          }
-        }
-      },
-      {
         patt: /^@([a-zA-Z]\w*)/,
         token(match) {
           return {
@@ -114,7 +132,8 @@ class TrackSyntax {
             Name: match[1]
           }
         }
-      }
+      },
+      FSM.include('nonalias')
     ];
 
     this.note = degrees.length === 0 ? [] : [
@@ -171,13 +190,56 @@ class TrackSyntax {
         pop: true
       },
       {
-        patt: /([a-zA-Z][a-zA-Z\d]*)/,
-        push: FSM.next('default', /^(?=>)/, /^,\s*/),
+        patt: /^(\s*)([a-zA-Z][a-zA-Z\d]*)/,
+        push: [
+          {
+            patt: /^(?=>)/,
+            pop: true
+          },
+          {
+            patt: /^,/,
+            pop: true
+          },
+          FSM.include('alias'),
+          FSM.include('nonalias'),
+          FSM.item('Macropitch', /^\[([a-zA-Z])\]/),
+          {
+            patt: /^\[([a-zA-Z])=/,
+            push: [
+              {
+                patt: /^\]/,
+                pop: true
+              },
+              {
+                patt: new RegExp('^' + note.pit),
+                token(match) {
+                  return {
+                    Degree: match[1],
+                    PitOp: match[2],
+                    Chord: match[3],
+                    VolOp: match[4]
+                  }
+                }
+              }
+            ],
+            token(match, content) {
+              return {
+                Type: 'Macropitch',
+                Content: match[1],
+                Pitches: content
+              }
+            }
+          },
+          FSM.item('Space', /^(\s+)/)
+        ],
         token(match, content) {
+          console.log(content)
           return {
             Type: '@inst',
-            name: match[1],
-            spec: content
+            name: match[2],
+            spec: content.filter(tok => tok.Type !== 'Macropitch'),
+            dict: content.filter(tok => tok.Type === 'Macropitch'),
+            space: match[1]
           }
         }
       }
@@ -219,19 +281,6 @@ class TrackSyntax {
         pop: true
       },
       {
-        patt: new RegExp(`^\\((${name}):`),
-        push: 'argument',
-        token(match, content) {
-          return {
-            Type: 'Function',
-            Name: match[1],
-            Alias: 0,
-            Args: content,
-            VoidQ: syntax.Dict.find(func => func.Name === match[1]).VoidQ
-          }
-        }
-      },
-      {
         patt: /^\\(?=(\d+(~\d+)?(, *\d+(~\d+)?)*)?:)/,
         push: FSM.next('volta', /^:/),
         token(match, content) {
@@ -271,8 +320,6 @@ class TrackSyntax {
           }
         }
       },
-      FSM.item('PedalPress', /^&/),
-      FSM.item('PedalRelease', /^\*/),
       FSM.item('Tie', /^\^/),
       FSM.item('Space', /^(\s+)/)
     ];
