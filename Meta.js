@@ -66,9 +66,8 @@ class MetaSyntax extends TrackSyntax {
         token(match, content) {
           return {
             Type: '@inst',
+            content: content,
             name: match[2],
-            spec: content.filter(tok => tok.Type !== 'Macropitch'),
-            dict: content.filter(tok => tok.Type === 'Macropitch'),
             space: match[1]
           }
         }
@@ -80,10 +79,12 @@ class MetaSyntax extends TrackSyntax {
     const instruments = [], warnings = [], degrees = ['0', '%']
     const result = new FSM(this).tokenize(string, 'meta')
     result.Content.forEach(tok => {
+      const dict = tok.content.filter(tok => tok.Type === 'Macropitch')
+      const spec = tok.content.filter(tok => tok.Type !== 'Macropitch')
       if (instList.includes(tok.name)) {
         if (!degrees.includes('1')) degrees.push(...scaleDegrees)
         const pitchDict = {}
-        tok.dict.forEach(macro => {
+        dict.forEach(macro => {
           if (Object.keys(pitchDict).includes(macro.Content)) {
             warnings.push({ Err: 'DupMacroPitch', Args: { Name: macro.Content } })
           } else if (macro.Pitches) {
@@ -94,7 +95,7 @@ class MetaSyntax extends TrackSyntax {
         })
         instruments.push({
           Name: tok.name,
-          Spec: tok.spec,
+          Spec: spec,
           Dict: pitchDict,
           Space: tok.space
         })
@@ -105,7 +106,7 @@ class MetaSyntax extends TrackSyntax {
           PitOp: '', Chord: '', VolOp: ''
         }]
         const pitchDict = { x: pitchData }
-        tok.dict.forEach(macro => {
+        dict.forEach(macro => {
           if (Object.keys(pitchDict).includes(macro.Content)) {
             warnings.push({ Err: 'DupMacroPitch', Args: { Name: macro.Content } })
           } else if (macro.Pitches) {
@@ -116,7 +117,7 @@ class MetaSyntax extends TrackSyntax {
         })
         instruments.push({
           Name: tok.name,
-          Spec: tok.spec,
+          Spec: spec,
           Dict: pitchDict,
           Space: tok.space 
         })

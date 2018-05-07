@@ -13,7 +13,6 @@ class NoteSyntax {
     this.in = `(${pitOp})(${chord})(${volOp})`
     this.out = `(${durOp})(${epilog})`
     this.sqr = `\\[((?:${degree}${inner})+)\\]`
-    this.pit = `(${degree}${pitOp}${chord}${volOp})`
     this.Patt = `(?:(?:\\[(?:${degree}${inner})+\\]|${degree})${inner}${outer})`
   }
 
@@ -31,7 +30,7 @@ class NoteSyntax {
   }
 
   pitch() {
-    return this.pit
+    return this.deg + this.in
   }
 
   context() {
