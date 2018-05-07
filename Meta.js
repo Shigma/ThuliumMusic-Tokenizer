@@ -2,9 +2,17 @@ const FSM = require('./Context')
 const NoteSyntax = require('./Note')
 const TrackSyntax = require('./Track')
 
+const instDict = require('../Config/Instrument.json')
+const percDict = require('../Config/Percussion.json')
+
+const instList = Object.keys(instDict)
+const percList = Object.keys(percDict)
+
+const scaleDegrees = ['1', '2', '3', '4', '5', '6', '7']
+
 class MetaSyntax extends TrackSyntax {
   constructor(syntax) {
-    const note = new NoteSyntax([], ['1', '2', '3', '4', '5', '6', '7'])
+    const note = new NoteSyntax([], scaleDegrees)
     super(syntax)
 
     this.meta = [
@@ -68,8 +76,61 @@ class MetaSyntax extends TrackSyntax {
     ]
   }
 
-  tokenize(string, state, epi = true) {
-    return new FSM(this).tokenize(string, state, epi)
+  tokenize(string) {
+    const instruments = [], warnings = [], degrees = ['0', '%']
+    const result = new FSM(this).tokenize(string, 'meta')
+    result.Content.forEach(tok => {
+      if (instList.includes(tok.name)) {
+        if (!degrees.includes('1')) degrees.push(...scaleDegrees)
+        const pitchDict = {}
+        tok.dict.forEach(macro => {
+          if (Object.keys(pitchDict).includes(macro.Content)) {
+            warnings.push({ Err: 'DupMacroPitch', Args: { Name: macro.Content } })
+          } else if (macro.Pitches) {
+            pitchDict[macro.Content] = macro.Pitches
+          } else {
+            warnings.push({ Err: 'NoPitchDef', Args: { Name: macro.Content } })
+          }
+        })
+        instruments.push({
+          Name: tok.name,
+          Spec: tok.spec,
+          Dict: pitchDict,
+          Space: tok.space
+        })
+      } else if (percList.includes(tok.name)) {
+        if (!degrees.includes('x')) degrees.push('x')
+        const pitchData = [{
+          Degree: percDict[tok.name] - 60,
+          PitOp: '', Chord: '', VolOp: ''
+        }]
+        const pitchDict = { x: pitchData }
+        tok.dict.forEach(macro => {
+          if (Object.keys(pitchDict).includes(macro.Content)) {
+            warnings.push({ Err: 'DupMacroPitch', Args: { Name: macro.Content } })
+          } else if (macro.Pitches) {
+            warnings.push({ Err: 'PitchDef', Args: { Name: macro.Content } })
+          } else {
+            pitchDict[macro.Content] = pitchData
+          }
+        })
+        instruments.push({
+          Name: tok.name,
+          Spec: tok.spec,
+          Dict: pitchDict,
+          Space: tok.space 
+        })
+      } else {
+        warnings.push({ Err: 'NotInstrument', Args: { Name: tok.name } })
+      }
+    })
+
+    return {
+      Instruments: instruments,
+      Warnings: warnings,
+      Degrees: degrees,
+      Index: result.Index
+    }
   }
 }
 

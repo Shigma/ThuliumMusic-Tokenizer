@@ -3,12 +3,6 @@ const MetaSyntax = require('./Meta')
 const TrackSyntax = require('./Track')
 const FSM = require('./Context')
 
-const instrDict = require('../Config/Instrument.json')
-const drumDict = require('../Config/Percussion.json')
-
-const instrList = Object.keys(instrDict)
-const drumList = Object.keys(drumDict)
-
 class TmSyntax {
   constructor() {
     this.Code = '' // Syntax Source Code
@@ -166,53 +160,30 @@ class TmTokenizer {
   }
 
   tokenizeTrack(track) {
-    let name, play = true, inst = [], degrees = ['0', '%']
-    const instrDegrees = ['1', '2', '3', '4', '5', '6', '7']
-    const drumDegrees = ['x']
+    let name, play = true, instruments = [], degrees = ['0', '%']
     const meta = track.match(/^<(?:(:)?([a-zA-Z][a-zA-Z\d]*):)?/)
 
     if (meta) {
       play = !meta[1]
       name = meta[2]
-      const syntax = new MetaSyntax(this.Syntax)
       track = track.slice(meta[0].length)
-      const data = syntax.tokenize(track, 'meta')
-      data.Content.forEach(tok => {
-        if (tok.Type !== '@inst') {
-          this.Warnings.push({
-            Err: 'NotInstrument',
-            Tok: tok
-          })
-        } else if (instrList.includes(tok.name)) {
-          instrDegrees.forEach(deg => {
-            if (!degrees.includes(deg)) degrees.push(deg)
-          })
-          inst.push({ Name: tok.name, Spec: tok.spec })
-        } else if (drumList.includes(tok.name)) {
-          drumDegrees.forEach(deg => {
-            if (!degrees.includes(deg)) degrees.push(deg)
-          })
-          inst.push({ Name: tok.name, Spec: tok.spec })
-        } else {
-          this.Warnings.push({
-            Err: 'NotInstrument',
-            Tok: tok
-          })
-        }
-      })
+      const data = new MetaSyntax(this.Syntax).tokenize(track)
+      this.Warnings.push(data.Warnings)
+      instruments = data.Instruments
+      degrees = data.Degrees
       track = track.slice(data.Index)
     }
-
     if (degrees.length === 2) {
-      degrees = ['1', '2', '3', '4', '5', '6', '7', '0', '%']
+      degrees.push('1', '2', '3', '4', '5', '6', '7')
     }
+
     const syntax = new TrackSyntax(this.Syntax, degrees)
     const result = syntax.tokenize(track, 'default')
 
     return {
       Play: play,
       Name: name,
-      Instruments: inst,
+      Instruments: instruments,
       Content: result.Content,
       Warnings: result.Warnings
     }
