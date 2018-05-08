@@ -10,13 +10,13 @@ const percList = Object.keys(percDict)
 
 const scaleDegrees = ['1', '2', '3', '4', '5', '6', '7']
 const defaultPitchDict = [
-  { Name: 1, Pitches: [{ Pitch: 0 }], Generated: true },
-  { Name: 2, Pitches: [{ Pitch: 2 }], Generated: true },
-  { Name: 3, Pitches: [{ Pitch: 4 }], Generated: true },
-  { Name: 4, Pitches: [{ Pitch: 5 }], Generated: true },
-  { Name: 5, Pitches: [{ Pitch: 7 }], Generated: true },
-  { Name: 6, Pitches: [{ Pitch: 9 }], Generated: true },
-  { Name: 7, Pitches: [{ Pitch: 11 }], Generated: true }
+  { Name: '1', Pitches: [{ Pitch: 0 }], Generated: true },
+  { Name: '2', Pitches: [{ Pitch: 2 }], Generated: true },
+  { Name: '3', Pitches: [{ Pitch: 4 }], Generated: true },
+  { Name: '4', Pitches: [{ Pitch: 5 }], Generated: true },
+  { Name: '5', Pitches: [{ Pitch: 7 }], Generated: true },
+  { Name: '6', Pitches: [{ Pitch: 9 }], Generated: true },
+  { Name: '7', Pitches: [{ Pitch: 11 }], Generated: true }
 ]
 
 class MetaSyntax extends TrackSyntax {
@@ -62,7 +62,7 @@ class MetaSyntax extends TrackSyntax {
                 patt: new RegExp('^' + note.pitch()),
                 token(match) {
                   return {
-                    Pitch: parseInt(match[1]),
+                    Pitch: match[1],
                     PitOp: match[2],
                     Chord: match[3],
                     VolOp: match[4]
@@ -99,8 +99,8 @@ class MetaSyntax extends TrackSyntax {
     result.Content.forEach(tok => {
       if (instList.includes(tok.name)) {
         if (!degrees.includes('1')) degrees.push(...scaleDegrees)
-        const pitchDict = defaultPitchDict
-        const pitchKeys = scaleDegrees
+        const pitchDict = defaultPitchDict.slice()
+        const pitchKeys = scaleDegrees.slice()
         tok.dict.forEach(macro => {
           if (pitchKeys.includes(macro.Name)) {
             warnings.push({ Err: 'DupMacroPitch', Args: { Name: macro.Name } })

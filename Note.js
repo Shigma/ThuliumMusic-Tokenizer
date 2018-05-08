@@ -44,9 +44,9 @@ class NoteSyntax {
         token(match) {
           return {
             Type: 'Note',
-            Pitches: [
+            Pitch: [
               {
-                Degree: match[1],
+                Pitch: match[1],
                 PitOp: match[2],
                 Chord: match[3],
                 VolOp: match[4]
@@ -67,10 +67,10 @@ class NoteSyntax {
           const match1 = match[1].match(new RegExp(inner, 'g'))
           return {
             Type: 'Note',
-            Pitches: match1.map(str => {
+            Pitch: match1.map(str => {
               const match = inner.exec(str)
               return {
-                Degree: match[1],
+                Pitch: match[1],
                 PitOp: match[2],
                 Chord: match[3],
                 VolOp: match[4]
