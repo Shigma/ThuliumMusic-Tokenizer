@@ -9,6 +9,15 @@ const instList = Object.keys(instDict)
 const percList = Object.keys(percDict)
 
 const scaleDegrees = ['1', '2', '3', '4', '5', '6', '7']
+const defaultPitchDict = [
+  { Name: 1, Pitches: [{ Pitch: 0 }], Generated: true },
+  { Name: 2, Pitches: [{ Pitch: 2 }], Generated: true },
+  { Name: 3, Pitches: [{ Pitch: 4 }], Generated: true },
+  { Name: 4, Pitches: [{ Pitch: 5 }], Generated: true },
+  { Name: 5, Pitches: [{ Pitch: 7 }], Generated: true },
+  { Name: 6, Pitches: [{ Pitch: 9 }], Generated: true },
+  { Name: 7, Pitches: [{ Pitch: 11 }], Generated: true }
+]
 
 class MetaSyntax extends TrackSyntax {
   constructor(syntax) {
@@ -33,7 +42,15 @@ class MetaSyntax extends TrackSyntax {
           },
           FSM.include('alias'),
           FSM.include('nonalias'),
-          FSM.item('Macropitch', /^\[([a-zA-Z])\]/),
+          {
+            patt: /^\[([a-zA-Z])\]/,
+            token(match, content) {
+              return {
+                Type: 'Macropitch',
+                Name: match[1]
+              }
+            }
+          },
           {
             patt: /^\[([a-zA-Z])=/,
             push: [
@@ -45,7 +62,7 @@ class MetaSyntax extends TrackSyntax {
                 patt: new RegExp('^' + note.pitch()),
                 token(match) {
                   return {
-                    Degree: match[1],
+                    Pitch: parseInt(match[1]),
                     PitOp: match[2],
                     Chord: match[3],
                     VolOp: match[4]
@@ -56,7 +73,7 @@ class MetaSyntax extends TrackSyntax {
             token(match, content) {
               return {
                 Type: 'Macropitch',
-                Content: match[1],
+                Name: match[1],
                 Pitches: content
               }
             }
@@ -66,7 +83,8 @@ class MetaSyntax extends TrackSyntax {
         token(match, content) {
           return {
             Type: '@inst',
-            content: content,
+            dict: content.filter(tok => tok.Type === 'Macropitch'),
+            spec: content.filter(tok => tok.Type !== 'Macropitch'),
             name: match[2],
             space: match[1]
           }
@@ -79,45 +97,44 @@ class MetaSyntax extends TrackSyntax {
     const instruments = [], warnings = [], degrees = ['0', '%']
     const result = new FSM(this).tokenize(string, 'meta')
     result.Content.forEach(tok => {
-      const dict = tok.content.filter(tok => tok.Type === 'Macropitch')
-      const spec = tok.content.filter(tok => tok.Type !== 'Macropitch')
       if (instList.includes(tok.name)) {
         if (!degrees.includes('1')) degrees.push(...scaleDegrees)
-        const pitchDict = {}
-        dict.forEach(macro => {
-          if (Object.keys(pitchDict).includes(macro.Content)) {
-            warnings.push({ Err: 'DupMacroPitch', Args: { Name: macro.Content } })
+        const pitchDict = defaultPitchDict
+        const pitchKeys = scaleDegrees
+        tok.dict.forEach(macro => {
+          if (pitchKeys.includes(macro.Name)) {
+            warnings.push({ Err: 'DupMacroPitch', Args: { Name: macro.Name } })
           } else if (macro.Pitches) {
-            pitchDict[macro.Content] = macro.Pitches
+            pitchDict.push({ Name: macro.Name, Pitches: macro.Pitches })
+            pitchKeys.push(macro.Name)
           } else {
-            warnings.push({ Err: 'NoPitchDef', Args: { Name: macro.Content } })
+            warnings.push({ Err: 'NoPitchDef', Args: { Name: macro.Name } })
           }
         })
         instruments.push({
           Name: tok.name,
-          Spec: spec,
+          Spec: tok.spec,
           Dict: pitchDict,
           Space: tok.space
         })
       } else if (percList.includes(tok.name)) {
         if (!degrees.includes('x')) degrees.push('x')
-        const pitchData = [{
-          Degree: percDict[tok.name] - 60,
-          PitOp: '', Chord: '', VolOp: ''
-        }]
-        const pitchDict = { x: pitchData }
-        dict.forEach(macro => {
-          if (Object.keys(pitchDict).includes(macro.Content)) {
-            warnings.push({ Err: 'DupMacroPitch', Args: { Name: macro.Content } })
+        const pitchData = { Pitch: percDict[tok.name] - 60 }
+        const pitchDict = [{ Name: 'x', Pitches: pitchData, Generated: true }]
+        const pitchKeys = ['x']
+        tok.dict.forEach(macro => {
+          if (pitchKeys.includes(macro.Name)) {
+            warnings.push({ Err: 'DupMacroPitch', Args: { Name: macro.Name } })
           } else if (macro.Pitches) {
-            warnings.push({ Err: 'PitchDef', Args: { Name: macro.Content } })
+            warnings.push({ Err: 'PitchDef', Args: { Name: macro.Name } })
           } else {
-            pitchDict[macro.Content] = pitchData
+            pitchDict.push({ Name: macro.Name, Pitches: pitchData })
+            pitchKeys.push(macro.Name)
           }
         })
         instruments.push({
           Name: tok.name,
-          Spec: spec,
+          Spec: tok.spec,
           Dict: pitchDict,
           Space: tok.space 
         })
