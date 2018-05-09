@@ -10,13 +10,13 @@ const percList = Object.keys(percDict)
 
 const scaleDegrees = ['1', '2', '3', '4', '5', '6', '7']
 const defaultPitchDict = [
-  { Name: '1', Pitches: [{ Pitch: 0 }], Generated: true },
-  { Name: '2', Pitches: [{ Pitch: 2 }], Generated: true },
-  { Name: '3', Pitches: [{ Pitch: 4 }], Generated: true },
-  { Name: '4', Pitches: [{ Pitch: 5 }], Generated: true },
-  { Name: '5', Pitches: [{ Pitch: 7 }], Generated: true },
-  { Name: '6', Pitches: [{ Pitch: 9 }], Generated: true },
-  { Name: '7', Pitches: [{ Pitch: 11 }], Generated: true }
+  { Name: '1', Pitches: 0 },
+  { Name: '2', Pitches: 2 },
+  { Name: '3', Pitches: 4 },
+  { Name: '4', Pitches: 5 },
+  { Name: '5', Pitches: 7 },
+  { Name: '6', Pitches: 9 },
+  { Name: '7', Pitches: 11 }
 ]
 
 class MetaSyntax extends TrackSyntax {
@@ -119,8 +119,8 @@ class MetaSyntax extends TrackSyntax {
         })
       } else if (percList.includes(tok.name)) {
         if (!degrees.includes('x')) degrees.push('x')
-        const pitchData = { Pitch: percDict[tok.name] - 60 }
-        const pitchDict = [{ Name: 'x', Pitches: pitchData, Generated: true }]
+        const pitchData = percDict[tok.name] - 60
+        const pitchDict = [{ Name: 'x', Pitches: pitchData }]
         const pitchKeys = ['x']
         tok.dict.forEach(macro => {
           if (pitchKeys.includes(macro.Name)) {
@@ -128,7 +128,9 @@ class MetaSyntax extends TrackSyntax {
           } else if (macro.Pitches) {
             warnings.push({ Err: 'PitchDef', Args: { Name: macro.Name } })
           } else {
-            pitchDict.push({ Name: macro.Name, Pitches: pitchData })
+            pitchDict.push({ Name: macro.Name, Pitches: [
+              { Pitch: pitchData }
+            ]})
             pitchKeys.push(macro.Name)
           }
         })

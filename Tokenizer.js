@@ -11,6 +11,7 @@ class TmSyntax {
     this.Chord = [] // Chord Operators
     this.Class = [] // Prologs & Epilogs
     this.Types = {} // Token Types
+    this.Meta = {} // Meta Attributes
     this.Context = { // FSM Contexts
       section: [],
       default: []

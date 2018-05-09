@@ -170,7 +170,7 @@ class TmLibrary {
 
   static notationTokenize(lines) {
     const code = lines.join('\n')
-    const errors = [], warnings = [], syntax = {}, proEpi = [], types = {}
+    const errors = [], warnings = [], syntax = {}, proEpi = [], types = {}, meta = {}
     try {
       const result = acorn.parse(code, {ecmaVersion: 8})
       result.body.forEach(tok => {
@@ -180,6 +180,7 @@ class TmLibrary {
           data.Name = tok.id.name
           TmLibrary.loadContext(syntax, data.syntax)
           TmLibrary.loadTypes(types, data.attributes, data.Name)
+          TmLibrary.loadMeta(meta, data.meta)
           delete data.syntax
           TmLibrary.loadClass(proEpi, [data])
         } else {
@@ -200,6 +201,7 @@ class TmLibrary {
     }
 
     return {
+      Meta: meta,
       Types: types,
       Class: proEpi,
       Context: syntax,
@@ -247,6 +249,13 @@ class TmLibrary {
     for (const type in src) {
       dest[type] = src[type]
       if (name) dest[type].class = name
+    }
+  }
+
+  static loadMeta(dest, src) {
+    if (src === undefined) return
+    for (const type in src) {
+      dest[type] = src[type]
     }
   }
 
