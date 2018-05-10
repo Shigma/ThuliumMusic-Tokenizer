@@ -1,6 +1,6 @@
 const acorn = require('acorn')
 const FSM = require('./Context')
-const {AliasSyntax} = require('./Alias')
+const { AliasSyntax } = require('./Alias')
 
 const int = '([+\\-]?\\d+)'
 const item = `(\\[${int}?(:${int}?)?\\])?${int}?`
@@ -180,7 +180,7 @@ class TmLibrary {
           data.Name = tok.id.name
           TmLibrary.loadContext(syntax, data.syntax)
           TmLibrary.loadTypes(types, data.attributes, data.Name)
-          TmLibrary.loadMeta(meta, data.meta)
+          TmLibrary.loadMeta(meta, data.metaAttributes)
           delete data.syntax
           TmLibrary.loadClass(proEpi, [data])
         } else {
@@ -253,10 +253,8 @@ class TmLibrary {
   }
 
   static loadMeta(dest, src) {
-    if (src === undefined) return
-    for (const type in src) {
-      dest[type] = src[type]
-    }
+    if (!src) src = {}
+    Object.assign(dest, src)
   }
 
   static loadContext(dest, src) {

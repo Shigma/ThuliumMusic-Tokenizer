@@ -1,7 +1,7 @@
 const FSM = require('./Context')
-const {TmAlias} = require('./Alias')
 const NoteSyntax = require('./Note')
 const TmLibrary = require('./Library')
+const { TmAlias } = require('./Alias')
 
 const ArgumentPatterns = {
   uns: {
