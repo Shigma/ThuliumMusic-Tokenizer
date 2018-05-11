@@ -1,28 +1,28 @@
 class NoteSyntax {
-  constructor(chords, degrees) {
-    this.Degrees = degrees
-    const degree = NoteSyntax.ArrayToRegex(degrees, false)
-    const chord = NoteSyntax.ArrayToRegex(chords, true)
-    const pitOp = "[#b',]*"
-    const durOp = '[._=-]*'
-    const volOp = '[>:]*'
-    const epilog = '[`]*'
-    const inner = `(?:${pitOp}${chord}${volOp})`
-    const outer = `(?:${durOp}${epilog})`
-    this.deg = `(${degree})`
-    this.in = `(${pitOp})(${chord})(${volOp})`
-    this.out = `(${durOp})(${epilog})`
-    this.sqr = `\\[((?:${degree}${inner})+)\\]`
-    this.Patt = `(?:(?:\\[(?:${degree}${inner})+\\]|${degree})${inner}${outer})`
-  }
-
-  static ArrayToRegex(array, multi = true) {
+  static ArrayToRegExp(array, multi = true) {
     let charset = '', quantifier = ''
     if (array.length > 0) {
       if (multi) quantifier = '*'
       charset = '[' + array.join('') + ']'
     }
     return charset + quantifier
+  }
+
+  constructor(chords, degrees) {
+    this.Degrees = degrees
+    this.degree = NoteSyntax.ArrayToRegExp(degrees, false)
+    this.chord = NoteSyntax.ArrayToRegExp(chords, true)
+    const pitOp = "[#b',]*"
+    const durOp = '[._=-]*'
+    const volOp = '[>:]*'
+    const epilog = '[`]*'
+    const inner = `(?:${pitOp}${this.chord}${volOp})`
+    const outer = `(?:${durOp}${epilog})`
+    this.deg = `(${this.degree})`
+    this.in = `(${pitOp})(${this.chord})(${volOp})`
+    this.out = `(${durOp})(${epilog})`
+    this.sqr = `\\[((?:${this.degree}${inner})+)\\]`
+    this.Patt = `(?:(?:\\[(?:${this.degree}${inner})+\\]|${this.degree})${inner}${outer})`
   }
 
   pattern() {

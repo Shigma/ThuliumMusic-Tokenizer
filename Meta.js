@@ -110,6 +110,9 @@ class MetaSyntax extends TrackSyntax {
           } else {
             warnings.push({ Err: 'NoPitchDef', Args: { Name: macro.Name } })
           }
+          if (!degrees.includes(macro.Name)) {
+            degrees.push(macro.Name)
+          }
         })
         instruments.push({
           Name: tok.name,
@@ -128,10 +131,11 @@ class MetaSyntax extends TrackSyntax {
           } else if (macro.Pitches) {
             warnings.push({ Err: 'PitchDef', Args: { Name: macro.Name } })
           } else {
-            pitchDict.push({ Name: macro.Name, Pitches: [
-              { Pitch: pitchData }
-            ]})
+            pitchDict.push({ Name: macro.Name, Pitches: pitchData })
             pitchKeys.push(macro.Name)
+          }
+          if (!degrees.includes(macro.Name)) {
+            degrees.push(macro.Name)
           }
         })
         instruments.push({
