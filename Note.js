@@ -9,10 +9,11 @@ class NoteSyntax {
   }
 
   constructor(chords, degrees) {
-    this.Degrees = degrees
+    const normal = degrees.includes('1')
+    this.exist = degrees.length > 0
     this.degree = NoteSyntax.ArrayToRegExp(degrees, false)
-    this.chord = NoteSyntax.ArrayToRegExp(chords, true)
-    const pitOp = "[#b',]*"
+    this.chord = normal ? NoteSyntax.ArrayToRegExp(chords, true) : ''
+    const pitOp = normal ? "[#b',]*" : ''
     const durOp = '[._=-]*'
     const volOp = '[>:]*'
     const epilog = '[`]*'
@@ -38,7 +39,7 @@ class NoteSyntax {
     const _in = this.in
     const out = this.out
     const sqr = this.sqr
-    return this.Degrees.length === 0 ? [] : [
+    return this.exist ? [
       {
         patt: new RegExp('^' + deg + _in + out),
         token(match) {
@@ -84,7 +85,7 @@ class NoteSyntax {
           }
         }
       }
-    ]
+    ] : []
   }
 }
 
