@@ -58,6 +58,10 @@ class TmTokenizer {
 
     this.$init = false
     this.$token = false
+    this.Index = {
+      base: undefined,
+      sections: []
+    }
   }
 
   initialize(forced = false) {
@@ -80,7 +84,7 @@ class TmTokenizer {
       if (!command) continue
       const keyword = command[0].toLowerCase()
       switch (keyword) {
-      case 'include':
+      case 'include': {
         const name = origin.slice(command.index + keyword.length).trim()
         if (name.includes('/')) {
           this.loadLibrary(this.$directory + '/' + name, origin)
@@ -88,10 +92,11 @@ class TmTokenizer {
           this.loadLibrary(this.$library.Path + '/' + name, origin)
         }
         break
+      }
 
       case 'chord':
       case 'function':
-      case 'notation':
+      case 'notation': {
         const lines = []
         while (TmTokenizer.startsFalse(src, ptr, '#')) {
           lines.push(src[ptr])
@@ -99,6 +104,7 @@ class TmTokenizer {
         }
         this.mergeLibrary(origin, lines, keyword)
         break
+      }
 
       case 'end':
         this.Library.push({ Type: 'end', Head: origin })
@@ -113,6 +119,7 @@ class TmTokenizer {
         break
       }
     }
+    this.Index.base = ptr
     this.Score = src.slice(ptr)
     this.$init = true
     return this.Syntax
@@ -126,6 +133,7 @@ class TmTokenizer {
 
     const src = this.Score
     let ptr = 0, blank = 0
+    let index = { start: 0, tracks: [] }
     let tracks = []
     let comment = []
 
@@ -133,7 +141,9 @@ class TmTokenizer {
       if (TmTokenizer.startsTrue(src, ptr, '//')) {
         blank += 1
         if (blank >= 2 && tracks.length !== 0) {
+          this.Index.sections.push(index)
           this.Sections.push(this.tokenizeSection(tracks, comment))
+          index = { start: ptr, tracks: [] }
           comment = []
           tracks = []
         }
@@ -142,6 +152,7 @@ class TmTokenizer {
         }
         ptr += 1
       } else {
+        index.tracks.push(ptr)
         let code = src[ptr]
         ptr += 1
         while (TmTokenizer.startsFalse(src, ptr, '//', true)) {
@@ -153,6 +164,7 @@ class TmTokenizer {
       }
     }
     if (tracks.length !== 0) {
+      this.Index.sections.push(index)
       this.Sections.push(this.tokenizeSection(tracks, comment))
     }
 
@@ -160,7 +172,7 @@ class TmTokenizer {
     return this.Sections
   }
 
-  tokenizeTrack(track) {
+  tokenizeTrack(track, index) {
     let name, play = true, instruments = [], degrees = ['0', '%']
     const meta = track.match(/^<(?:(:)?([a-zA-Z][a-zA-Z\d]*):)?/)
 
@@ -184,6 +196,7 @@ class TmTokenizer {
     return {
       Play: play,
       Name: name,
+      Index: index,
       Instruments: instruments,
       Content: result.Content,
       Warnings: result.Warnings
@@ -191,7 +204,7 @@ class TmTokenizer {
   }
 
   tokenizeSection(tracklist, comment) {
-    const result = tracklist.map(track => this.tokenizeTrack(track))
+    const result = tracklist.map((track, index) => this.tokenizeTrack(track, index))
     const prolog = [], epilog = [], settings = [], tracks = []
 
     result.forEach((track, index) => {
