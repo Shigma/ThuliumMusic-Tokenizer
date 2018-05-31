@@ -119,10 +119,16 @@ class TmTokenizer {
         break
       }
     }
-    this.Index.base = ptr
+    this.Index.base = TmTokenizer.position(src, ptr)
     this.Score = src.slice(ptr)
     this.$init = true
     return this.Syntax
+  }
+
+  static position(arr, ptr) {
+    return arr.slice(0, ptr).reduce((total, curr) => {
+      return total + curr.length + 1
+    }, 0)
   }
 
   tokenize(forced = false) {
@@ -143,7 +149,7 @@ class TmTokenizer {
         if (blank >= 2 && tracks.length !== 0) {
           this.Index.sections.push(index)
           this.Sections.push(this.tokenizeSection(tracks, comment))
-          index = { start: ptr, tracks: [] }
+          index = { start: TmTokenizer.position(src, ptr), tracks: [] }
           comment = []
           tracks = []
         }
@@ -152,7 +158,7 @@ class TmTokenizer {
         }
         ptr += 1
       } else {
-        index.tracks.push(ptr)
+        index.tracks.push(TmTokenizer.position(src, ptr))
         let code = src[ptr]
         ptr += 1
         while (TmTokenizer.startsFalse(src, ptr, '//', true)) {
