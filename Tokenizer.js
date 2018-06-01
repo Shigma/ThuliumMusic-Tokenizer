@@ -58,6 +58,7 @@ class TmTokenizer {
 
     this.$init = false
     this.$token = false
+    this.Macro = []
     this.Scoping = {
       inst: [],
       func: [],
@@ -84,13 +85,17 @@ class TmTokenizer {
     // Libraries
     while (TmTokenizer.startsTrue(src, ptr, '#')) {
       const origin = src[ptr]
-      const command = origin.match(/[a-zA-Z]+/)
+      const command = origin.match(/^# *([a-zA-Z]+)/)
       ptr += 1
       if (!command) continue
-      const keyword = command[0].toLowerCase()
+      const keyword = command[1].toLowerCase()
       switch (keyword) {
       case 'include': {
-        const name = origin.slice(command.index + keyword.length).trim()
+        const name = origin.slice(command[0].length).trim()
+        this.Scoping.pack.push({
+          start: TmTokenizer.position(src, ptr - 1) + command[0].length + 1,
+          end: TmTokenizer.position(src, ptr) - 1
+        })
         if (name.includes('/')) {
           this.loadLibrary(this.$directory + '/' + name, origin)
         } else {
@@ -198,6 +203,14 @@ class TmTokenizer {
       instruments = data.Instruments
       degrees = data.Degrees
       code = code.slice(data.Index)
+      if (name) {
+        const index = this.Macro.findIndex(macro => macro.name === name)
+        if (index === -1) {
+          this.Macro.push({ name, code })
+        } else {
+          this.Macro[index].code = code
+        }
+      }
       data.Scoping.forEach(scope => {
         if (scope.name === 'meta') {
           instScope.push({
@@ -262,13 +275,17 @@ class TmTokenizer {
   }
 
   loadLibrary(path, origin) {
-    const data = this.loadFile(path)
-    this.Syntax.load(data)
-    if (origin) {
-      this.Library.push({
-        Type: 'include',
-        Head: origin
-      })
+    try {
+      const data = this.loadFile(path)
+      this.Syntax.load(data)
+      if (origin) {
+        this.Library.push({
+          Type: 'include',
+          Head: origin
+        })
+      }
+    } catch (error) {
+      // report
     }
   }
 
