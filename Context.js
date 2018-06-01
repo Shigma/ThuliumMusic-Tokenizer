@@ -41,9 +41,10 @@ class FSM {
   //   token: callback
 
   tokenize(string, state, epi = true) {
-    let valid = true, index = 0
-    let result = [], warnings = []
+    let valid = true, index = 0, last = 0
+    let result = [], warnings = [], scoping = []
     const syntax = this.getContext(state)
+    if (typeof state !== 'string') state = 'anonymous'
     
     while (string.length > 0) {
       let i, pop = false
@@ -64,7 +65,18 @@ class FSM {
                 Pos: msg.Pos + index
               }
             }))
+            scoping.push(
+              { start: last, end: index, name: state },
+              ...subtoken.Scoping.map(scope => {
+                return {
+                  start: scope.start + index,
+                  end: scope.end + index,
+                  name: scope.name
+                }
+              })
+            )
             index += subtoken.Index
+            last = index
             string = string.slice(subtoken.Index)
             content = subtoken.Content
           }
@@ -72,7 +84,7 @@ class FSM {
           if (stx.token) {
             const tok = stx.token(match, content)
             if (stx.locate === true || stx.locate === undefined) {
-              Object.assign(tok, {Pos: position})
+              tok.Pos = position
             }
             result.push(tok)
           }
@@ -97,10 +109,12 @@ class FSM {
       }
     }
 
+    scoping.push({ start: last, end: index, name: state })
     if (epi) result = FSM.arrange(result)
     return {
       Index: index,
       Content: result,
+      Scoping: scoping,
       Warnings: warnings
     }
   }

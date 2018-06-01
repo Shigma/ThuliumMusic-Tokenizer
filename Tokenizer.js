@@ -58,6 +58,11 @@ class TmTokenizer {
 
     this.$init = false
     this.$token = false
+    this.Scoping = {
+      inst: [],
+      func: [],
+      pack: []
+    }
     this.Index = {
       base: undefined,
       sections: []
@@ -140,8 +145,7 @@ class TmTokenizer {
     const src = this.Score
     let ptr = 0, blank = 0
     let index = { start: 0, tracks: [] }
-    let tracks = []
-    let comment = []
+    let tracks = [], comment = []
 
     while (ptr < src.length) {
       if (TmTokenizer.startsTrue(src, ptr, '//')) {
@@ -158,7 +162,8 @@ class TmTokenizer {
         }
         ptr += 1
       } else {
-        index.tracks.push(TmTokenizer.position(src, ptr))
+        const position = TmTokenizer.position(src, ptr)
+        index.tracks.push(position)
         let code = src[ptr]
         ptr += 1
         while (TmTokenizer.startsFalse(src, ptr, '//', true)) {
@@ -166,7 +171,7 @@ class TmTokenizer {
           ptr += 1
         }
         blank = 0
-        tracks.push(code)
+        tracks.push({ source: code, base: position })
       }
     }
     if (tracks.length !== 0) {
@@ -180,24 +185,35 @@ class TmTokenizer {
 
   tokenizeTrack(track, index) {
     let name, play = true, instruments = [], degrees = ['0', '%']
-    const meta = track.match(/^<(?:(:)?([a-zA-Z][a-zA-Z\d]*):)?/)
+    let code = track.source, base = track.base + this.Index.base
+    const meta = code.match(/^<(?:(:)?([a-zA-Z][a-zA-Z\d]*):)?/)
 
     if (meta) {
       play = !meta[1]
       name = meta[2]
-      track = track.slice(meta[0].length)
-      const data = new MetaSyntax(this.Syntax).tokenize(track)
+      code = code.slice(meta[0].length)
+      const data = new MetaSyntax(this.Syntax).tokenize(code)
+      const instScope = [], funcScope = []
       this.Warnings.push(data.Warnings)
       instruments = data.Instruments
       degrees = data.Degrees
-      track = track.slice(data.Index)
+      code = code.slice(data.Index)
+      data.Scoping.forEach(scope => {
+        if (scope.name === 'meta') {
+          instScope.push({
+            start: scope.start + meta[0].length + base,
+            end: scope.end + meta[0].length + base
+          })
+        }
+      })
+      this.Scoping.inst.push(...instScope)
     }
     if (degrees.length === 2) {
       degrees.push('1', '2', '3', '4', '5', '6', '7')
     }
 
     const syntax = new TrackSyntax(this.Syntax, degrees)
-    const result = syntax.tokenize(track, 'default')
+    const result = syntax.tokenize(code, 'default')
 
     return {
       Play: play,

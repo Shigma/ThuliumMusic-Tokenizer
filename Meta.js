@@ -148,11 +148,13 @@ class MetaSyntax extends TrackSyntax {
         warnings.push({ Err: 'NotInstrument', Args: { Name: tok.name } })
       }
     })
+    result.Scoping.pop()
 
     return {
       Instruments: instruments,
       Warnings: warnings,
       Degrees: degrees,
+      Scoping: result.Scoping,
       Index: result.Index
     }
   }
