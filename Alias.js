@@ -63,8 +63,9 @@ class AliasSyntax extends FSM {
       if (tok.Type === '@inv') {
         this.Warnings.push({
           Err: 'InvalidArgument',
-          Src: this.Source.slice(tok.Pos, this.Syntax[index + 1].Pos),
-          Pos: tok.Pos
+          Pos: tok.Pos,
+          Args: { src: this.Source.slice(tok.Pos, this.Syntax[index + 1].Pos) },
+          Rank: 1
         })
       }
 
@@ -204,4 +205,4 @@ class TmAlias {
 
 AliasSyntax.Pattern = /^(?: *prec(?:edence)?: *(\d+);)? *alias:(.+)$/i
 
-module.exports = {TmAlias, AliasSyntax}
+module.exports = { TmAlias, AliasSyntax }

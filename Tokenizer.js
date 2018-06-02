@@ -1,6 +1,7 @@
 const TmLibrary = require('./Library')
 const MetaSyntax = require('./Meta')
 const TrackSyntax = require('./Track')
+const TmError = require('../linter/Error')
 const FSM = require('./Context')
 
 class TmSyntax {
@@ -46,18 +47,22 @@ class TmTokenizer {
   constructor(input, loader) {
     this.Comment = []
     this.Library = []
-    this.Warnings = []
-    this.Errors = []
     this.Settings = []
+    this.Warnings = [] // FIXME: to be deleted
+    this.Errors = new TmError()
     this.Syntax = new TmSyntax()
 
-    this.Source = input.split(/\r?\n/g)
+    if (input[0] === '\uFEFF') input.splice(1, 1) // Handling BOM
+    this.Source = input.split(/\r?\n/g) // Handling CRLF
+
     this.loadFile = loader.loadFile
     this.$library = loader.$library
     this.$directory = loader.$directory
 
     this.$init = false
     this.$token = false
+
+    // For editor tracking the scopes
     this.Macro = []
     this.Scoping = {
       inst: [],
@@ -122,9 +127,10 @@ class TmTokenizer {
 
       default:
         this.Errors.push({
-          Err: 'InvaildCommand',
-          Pos: ptr,
-          Src: origin
+          Err: TmError.Token.InvalidCommand,
+          Pos: { line: ptr - 1 },
+          Args: { src: command[1] },
+          Rank: 2
         })
         break
       }
@@ -274,6 +280,10 @@ class TmTokenizer {
     }
   }
 
+  pushError() {
+    this.Errors.push()
+  }
+
   loadLibrary(path, origin) {
     try {
       const data = this.loadFile(path)
@@ -284,8 +294,8 @@ class TmTokenizer {
           Head: origin
         })
       }
-    } catch (error) {
-      // report
+    } catch (err) {
+      this.Errors.push(new TmError('Token::Loading'))
     }
   }
 
