@@ -170,6 +170,8 @@ class TmTokenizer {
         }
         if (src[ptr].startsWith('//')) {
           comment.push(src[ptr].slice(2))
+        } else {
+          index.start += 1
         }
         ptr += 1
       } else {
