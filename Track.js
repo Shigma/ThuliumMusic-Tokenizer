@@ -130,6 +130,7 @@ class TrackSyntax {
       },
       {
         patt: /^\d+/,
+        locate: false,
         token: match => parseInt(match[0])
       },
       {
