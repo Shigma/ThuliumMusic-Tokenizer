@@ -95,44 +95,44 @@ class TmTokenizer {
       if (!command) continue
       const keyword = command[1].toLowerCase()
       switch (keyword) {
-      case 'include': {
-        const name = origin.slice(command[0].length).trim()
-        this.Scoping.pack.push({
-          start: TmTokenizer.position(src, ptr - 1) + command[0].length + 1,
-          end: TmTokenizer.position(src, ptr) - 1
-        })
-        if (name.includes('/')) {
-          this.loadLibrary(this.$directory + '/' + name, origin)
-        } else {
-          this.loadLibrary(this.$library.Path + '/' + name, origin)
+        case 'include': {
+          const name = origin.slice(command[0].length).trim()
+          this.Scoping.pack.push({
+            start: TmTokenizer.position(src, ptr - 1) + command[0].length + 1,
+            end: TmTokenizer.position(src, ptr) - 1
+          })
+          if (name.includes('/')) {
+            this.loadLibrary(this.$directory + '/' + name, origin)
+          } else {
+            this.loadLibrary(this.$library.Path + '/' + name, origin)
+          }
+          break
         }
-        break
-      }
 
-      case 'chord':
-      case 'function':
-      case 'notation': {
-        const lines = []
-        while (TmTokenizer.startsFalse(src, ptr, '#')) {
-          lines.push(src[ptr])
-          ptr += 1
+        case 'chord':
+        case 'function':
+        case 'notation': {
+          const lines = []
+          while (TmTokenizer.startsFalse(src, ptr, '#')) {
+            lines.push(src[ptr])
+            ptr += 1
+          }
+          this.mergeLibrary(origin, lines, keyword)
+          break
         }
-        this.mergeLibrary(origin, lines, keyword)
-        break
-      }
 
-      case 'end':
-        this.Library.push({ Type: 'end', Head: origin })
-        break
+        case 'end':
+          this.Library.push({ Type: 'end', Head: origin })
+          break
 
-      default:
-        this.Errors.push({
-          Err: TmError.Token.InvalidCommand,
-          Pos: { line: ptr - 1 },
-          Args: { src: command[1] },
-          Rank: 2
-        })
-        break
+        default:
+          this.Errors.push({
+            Err: TmError.Token.InvalidCommand,
+            Pos: { line: ptr - 1 },
+            Args: { src: command[1] },
+            Rank: 2
+          })
+          break
       }
     }
     this.Index.base = TmTokenizer.position(src, ptr)

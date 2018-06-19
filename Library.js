@@ -47,18 +47,18 @@ class TmLibrary {
         }
       }
       switch (node.type) {
-      case 'IfStatement':
-        return walk(node.consequent) && (!node.alternate || walk(node.alternate))
-      case 'SwitchStatement':
-        return node.cases.every((sub) => sub.consequent.every(walk))
-      case 'ThrowStatement':
-        throw new Error('With throw')
-      case 'TryStatement':
-        return walk(node.block) &&
+        case 'IfStatement':
+          return walk(node.consequent) && (!node.alternate || walk(node.alternate))
+        case 'SwitchStatement':
+          return node.cases.every((sub) => sub.consequent.every(walk))
+        case 'ThrowStatement':
+          throw new Error('With throw')
+        case 'TryStatement':
+          return walk(node.block) &&
               (!node.handler || walk(node.handler.body)) &&
               (!node.finalizer || walk(node.finalizer))
-      default:
-        return true
+        default:
+          return true
       }
     }
     return walk(funcAST.body)
