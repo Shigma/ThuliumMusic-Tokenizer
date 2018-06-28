@@ -52,7 +52,7 @@ class TmTokenizer {
     this.Errors = new TmError()
     this.Syntax = new TmSyntax()
 
-    if (input[0] === '\uFEFF') input.splice(1, 1) // Handling BOM
+    if (input[0] === '\uFEFF') input = input.slice(1) // Handling BOM
     this.Source = input.split(/\r?\n/g) // Handling CRLF
 
     this.loadFile = loader.loadFile
